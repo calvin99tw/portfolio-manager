@@ -54,7 +54,7 @@ dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmo
 |---|------|------|------|
 | T1 | Supabase 建專案 + 資料表 | ✅ 完成 | Project URL 與資料表已建立 |
 | T2 | GitHub repo + Pages 設定 | ✅ 完成 | Pages 上線，Supabase URL Configuration 已更新 |
-| T3 | App 加入登入功能 | ⏳ 待執行 | 建立 index.html，Magic Link 登入流程，資料層暫時還是 localStorage |
+| T3 | App 加入登入功能 | ✅ 完成 | index.html 建立，OTP 驗證碼登入，session 預設一週，資料層暫時還是 localStorage |
 | T4 | 資料層換成 Supabase | ⏳ 待執行 | localStorage → Supabase，需要 anon key |
 | T5 | 台股股價自動抓取 | ⏳ 待執行 | TWSE OpenAPI，需實測 CORS |
 | T6 | 美股股價自動抓取 | ⏳ 待執行 | Yahoo Finance，需實測 CORS |
