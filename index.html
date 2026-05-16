@@ -329,11 +329,11 @@ h1, .heading { color: var(--text-1); }
     <div id="loginOtpStep" style="display:none">
       <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;line-height:1.7">
         驗證碼已寄至 <strong id="loginSentEmail" style="color:var(--text-2)"></strong><br>
-        請輸入信中的 8 位數字
+        請輸入信中的 6 位數字
       </div>
       <label class="login-label" for="loginOtp">驗證碼</label>
       <input class="login-otp-input" type="text" id="loginOtp"
-        inputmode="numeric" maxlength="8" placeholder="00000000"
+        inputmode="numeric" maxlength="6" placeholder="000000"
         autocomplete="one-time-code">
       <button class="login-btn" id="loginVerifyBtn" onclick="verifyOtp()" style="margin-top:14px">確認登入</button>
       <div class="login-msg" id="loginOtpMsg"></div>
@@ -734,7 +734,7 @@ async function sendOtp() {
 
 async function verifyOtp() {
   const token = document.getElementById('loginOtp').value.trim();
-  if (token.length !== 8) { showOtpMsg('請輸入 8 位數驗證碼', true); return; }
+  if (token.length !== 6) { showOtpMsg('請輸入 6 位數驗證碼', true); return; }
 
   const btn = document.getElementById('loginVerifyBtn');
   btn.disabled = true;
