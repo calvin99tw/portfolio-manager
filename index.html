@@ -346,8 +346,7 @@ h1, .heading { color: var(--text-1); }
 
     <hr class="login-divider">
     <div style="font-size:11px;color:var(--text-4);text-align:center;line-height:1.7">
-      無密碼登入 · 資料儲存於本機<br>
-      <span style="color:var(--text-5)">v4 開發中 · 資料層 localStorage</span>
+      無密碼登入 · 資料儲存於雲端
     </div>
   </div>
 </div>
@@ -356,6 +355,10 @@ h1, .heading { color: var(--text-1); }
      MAIN APP (hidden until authenticated)
      ═══════════════════════════════════════════════════ -->
 <div id="app" style="display:none">
+
+<div id="offlineBanner" style="display:none; background:var(--warn-bg); border-bottom:1px solid var(--warn-border); padding:8px 32px; font-size:12px; color:var(--warn)">
+  ⚠ 目前離線，資料暫存本機。請勿同時在其他裝置編輯，以免復線時資料被覆蓋。
+</div>
 
 <div class="header">
   <div>
@@ -523,9 +526,7 @@ h1, .heading { color: var(--text-1); }
     <div class="card" style="padding:24px">
       <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">資料管理</div>
       <div style="font-size:11px;color:var(--text-3);line-height:1.7;margin-bottom:14px">
-        所有資料自動儲存在這台電腦的瀏覽器中（localStorage），下次開啟自動載入。<br>
-        ※ 換電腦或更換瀏覽器，需透過 CSV 匯出/匯入轉移資料<br>
-        ※ 清除瀏覽器「網站資料」會清空，建議定期匯出 CSV 備份
+        資料儲存於 Supabase 雲端，登入即可跨裝置存取。CSV 匯出可作為本機備份。
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-action" onclick="resetToSample()">⟲ 重設為範例資料</button>
@@ -822,152 +823,189 @@ const SAMPLE_DATA = {
   settings: { poolTWD: 500000, poolUSD: 10000, usdRate: 32, hotThreshold: 20, oversoldThreshold: -15 }
 };
 
-function loadFromStorage() {
+function loadCacheFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return { exists: false, data: null };
+    if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if(!Array.isArray(parsed?.buys)) {
-      console.warn("localStorage 資料結構異常，忽略");
-      return { exists: true, data: null, corrupt: true };
-    }
-    return { exists: true, data: parsed };
-  } catch(e) {
-    console.warn("讀取 localStorage 失敗：", e);
-    return { exists: true, data: null, corrupt: true };
-  }
+    if (!Array.isArray(parsed?.buys)) return null;
+    return parsed;
+  } catch(e) { return null; }
 }
 
-let _saveEnabled = false;
-let _dirty = false;
-
-function markDirty() {
-  _dirty = true;
-  updateStorageStatus();
-  updateSaveButtonState();
-}
-
-function markClean() {
-  _dirty = false;
-  updateStorageStatus();
-  updateSaveButtonState();
-}
-
-function updateSaveButtonState() {
-  const btn = document.getElementById("btn-save-data");
-  if(!btn) return;
-  if(_dirty) {
-    btn.style.boxShadow = "0 0 0 2px var(--pos-bg), 0 0 12px var(--pos-bg)";
-    btn.textContent = "💾 儲存資料 ●";
-  } else {
-    btn.style.boxShadow = "";
-    btn.textContent = "💾 儲存資料";
-  }
-}
-
-function saveToStorage(force=false) {
-  if(!_saveEnabled && !force) return;
+function saveToLocalCache() {
   try {
-    const data = {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
       buys, sells, dividends,
       settings: {
         poolTWD: parseFloat(document.getElementById("poolTWD")?.value)||0,
         poolUSD: parseFloat(document.getElementById("poolUSD")?.value)||0,
         usdRate: parseFloat(document.getElementById("usdRate")?.value)||32,
-        hotThreshold: parseFloat(document.getElementById("hotThreshold")?.value)||20,
-        oversoldThreshold: parseFloat(document.getElementById("oversoldThreshold")?.value)||-15,
       },
       savedAt: new Date().toISOString(),
-      version: "3.1"
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      version: "4.0"
+    }));
+  } catch(e) { console.warn("快取至 localStorage 失敗：", e); }
+}
+
+async function loadFromSupabase() {
+  const uid = currentUser?.id;
+  if (!uid) return;
+  try {
+    const [buysRes, sellsRes, divsRes, poolsRes] = await Promise.all([
+      sb.from('buys').select('*').eq('user_id', uid),
+      sb.from('sells').select('*').eq('user_id', uid),
+      sb.from('dividends').select('*').eq('user_id', uid),
+      sb.from('pools').select('*').eq('user_id', uid).limit(1),
+    ]);
+    if (buysRes.error) throw buysRes.error;
+    if (sellsRes.error) throw sellsRes.error;
+    if (divsRes.error) throw divsRes.error;
+    buys = buysRes.data || [];
+    sells = sellsRes.data || [];
+    dividends = divsRes.data || [];
+    if (poolsRes.data?.length) {
+      const p = poolsRes.data[0];
+      if (p.poolTWD != null) document.getElementById("poolTWD").value = p.poolTWD;
+      if (p.poolUSD != null) document.getElementById("poolUSD").value = p.poolUSD;
+      if (p.usdRate != null) document.getElementById("usdRate").value = p.usdRate;
+    }
+    saveToLocalCache();
+    updateStorageStatus(true);
   } catch(e) {
-    console.warn("儲存 localStorage 失敗：", e);
+    console.warn("Supabase 資料載入失敗：", e);
+    updateStorageStatus(false);
   }
 }
 
-function enableSave() {
-  _saveEnabled = true;
-  markDirty();
+async function upsertPools() {
+  const uid = currentUser?.id;
+  if (!uid) return;
+  try {
+    const { error } = await sb.from('pools').upsert({
+      user_id: uid,
+      poolTWD: parseFloat(document.getElementById("poolTWD")?.value)||0,
+      poolUSD: parseFloat(document.getElementById("poolUSD")?.value)||0,
+      usdRate: parseFloat(document.getElementById("usdRate")?.value)||32,
+    }, { onConflict: 'user_id' });
+    if (error) throw error;
+    saveToLocalCache();
+    updateStorageStatus(true);
+  } catch(e) {
+    console.warn("pools upsert 失敗：", e);
+    showToast("儲存失敗，請確認網路連線", true);
+  }
+}
+
+async function syncLocalToSupabase() {
+  const uid = currentUser?.id;
+  if (!uid) return;
+  if (buys.length) {
+    const { error } = await sb.from('buys').upsert(buys.map(b=>({...b,user_id:uid})), {onConflict:'id'});
+    if (error) throw error;
+  }
+  if (sells.length) {
+    const { error } = await sb.from('sells').upsert(sells.map(s=>({...s,user_id:uid})), {onConflict:'id'});
+    if (error) throw error;
+  }
+  if (dividends.length) {
+    const { error } = await sb.from('dividends').upsert(dividends.map(d=>({...d,user_id:uid})), {onConflict:'id'});
+    if (error) throw error;
+  }
+  await upsertPools();
+}
+
+function updateStorageStatus(synced) {
+  const el = document.getElementById("storageStatus");
+  if (!el) return;
+  if (!navigator.onLine) {
+    el.textContent = "離線 · 資料暫存本機";
+    el.style.color = "var(--warn)";
+    return;
+  }
+  if (synced) {
+    const now = new Date();
+    const time = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
+    el.textContent = `已同步 · ${time}`;
+    el.style.color = "var(--neg)";
+  } else {
+    el.textContent = "同步中…";
+    el.style.color = "var(--text-3)";
+  }
 }
 
 function onSettingChange() {
-  enableSave();
+  try {
+    localStorage.setItem('portfolio-thresholds', JSON.stringify({
+      hotThreshold: parseFloat(document.getElementById("hotThreshold")?.value)||20,
+      oversoldThreshold: parseFloat(document.getElementById("oversoldThreshold")?.value)||-15,
+    }));
+  } catch(e) {}
+  upsertPools();
   render();
 }
 
-function resetToSample() {
+async function resetToSample() {
   if(!confirm("確定要清除目前所有資料，重新載入範例資料？\n此動作無法復原。建議先匯出 CSV 備份。")) return;
-  buys = JSON.parse(JSON.stringify(SAMPLE_DATA.buys));
-  sells = [];
-  dividends = [];
-  document.getElementById("poolTWD").value = SAMPLE_DATA.settings.poolTWD;
-  document.getElementById("poolUSD").value = SAMPLE_DATA.settings.poolUSD;
-  document.getElementById("usdRate").value = SAMPLE_DATA.settings.usdRate;
-  document.getElementById("hotThreshold").value = SAMPLE_DATA.settings.hotThreshold;
-  document.getElementById("oversoldThreshold").value = SAMPLE_DATA.settings.oversoldThreshold;
-  sel = null;
-  enableSave();
-  saveToStorage(true);
-  syncToolbar(); render();
-  showToast("已重設為範例資料");
+  const uid = currentUser?.id;
+  try {
+    await Promise.all([
+      sb.from('buys').delete().eq('user_id', uid),
+      sb.from('sells').delete().eq('user_id', uid),
+      sb.from('dividends').delete().eq('user_id', uid),
+    ]);
+    const sampleBuys = SAMPLE_DATA.buys.map(b => ({...b, user_id: uid}));
+    const { error } = await sb.from('buys').insert(sampleBuys);
+    if (error) throw error;
+    buys = sampleBuys;
+    sells = [];
+    dividends = [];
+    document.getElementById("poolTWD").value = SAMPLE_DATA.settings.poolTWD;
+    document.getElementById("poolUSD").value = SAMPLE_DATA.settings.poolUSD;
+    document.getElementById("usdRate").value = SAMPLE_DATA.settings.usdRate;
+    document.getElementById("hotThreshold").value = SAMPLE_DATA.settings.hotThreshold;
+    document.getElementById("oversoldThreshold").value = SAMPLE_DATA.settings.oversoldThreshold;
+    await upsertPools();
+    sel = null;
+    saveToLocalCache();
+    syncToolbar(); render();
+    showToast("已重設為範例資料");
+  } catch(e) {
+    console.warn("resetToSample 失敗：", e);
+    showToast("重設失敗，請確認網路連線", true);
+  }
 }
 
-function clearAllData() {
+async function clearAllData() {
   if(!confirm("確定要清空所有資料？\n此動作無法復原。建議先匯出 CSV 備份。")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  _saveEnabled = false;
-  buys = []; sells = []; dividends = [];
-  sel = null;
-  markClean();
-  syncToolbar(); render();
-  showToast("已清空所有資料");
+  const uid = currentUser?.id;
+  try {
+    await Promise.all([
+      sb.from('buys').delete().eq('user_id', uid),
+      sb.from('sells').delete().eq('user_id', uid),
+      sb.from('dividends').delete().eq('user_id', uid),
+      sb.from('pools').delete().eq('user_id', uid),
+    ]);
+    buys = []; sells = []; dividends = [];
+    localStorage.removeItem(STORAGE_KEY);
+    sel = null;
+    updateStorageStatus(true);
+    syncToolbar(); render();
+    showToast("已清空所有資料");
+  } catch(e) {
+    console.warn("clearAllData 失敗：", e);
+    showToast("清空失敗，請確認網路連線", true);
+  }
 }
 
-function updateStorageStatus() {
-  const el = document.getElementById("storageStatus");
-  if(!el) return;
-  if(!_saveEnabled) {
-    el.textContent = "（讀取範例資料中，編輯後才會儲存）";
-    el.style.color = "var(--text-3)";
-    return;
-  }
-  if(_dirty) {
-    el.textContent = "● 有變動尚未儲存到資料檔案";
-    el.style.color = "var(--pos)";
-    return;
-  }
-  const now = new Date();
-  const time = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
-  el.textContent = `已同步至本機 · ${time}`;
-  el.style.color = "var(--neg)";
-}
-
-// 資料在模組層級載入（不依賴 DOM）
-const _stored = loadFromStorage();
-let buys, sells, dividends;
-if(_stored.data?.buys) {
-  buys = _stored.data.buys;
-  sells = _stored.data.sells || [];
-  dividends = _stored.data.dividends || [];
-  _saveEnabled = true;
-} else if(_stored.corrupt) {
-  buys = JSON.parse(JSON.stringify(SAMPLE_DATA.buys));
-  sells = [];
-  dividends = [];
-  console.warn("localStorage 資料異常，請手動匯入 CSV 或重設範例");
-} else {
-  buys = JSON.parse(JSON.stringify(SAMPLE_DATA.buys));
-  sells = [];
-  dividends = [];
-}
+let buys = [], sells = [], dividends = [];
 let viewMode = 'split';
 let sel = null;
 let expanded = new Set();
 let editBuyId = null, sellTargetId = null, priceTargetTicker = null, divTargetTicker = null;
 let editSellId = null;
 let editDividendId = null;
-let _appInited = false; // guard: only init once per auth session
+let _appInited = false;
 
 // ══════════════════════════════════════════════════════
 // HELPERS
@@ -1121,11 +1159,20 @@ function openPriceModal(ticker,price){
   document.getElementById("priceModal").classList.add("open");
 }
 function closePriceModal(){ document.getElementById("priceModal").classList.remove("open"); priceTargetTicker=null; }
-function confirmUpdatePrice(){
-  enableSave();
+async function confirmUpdatePrice(){
   const p=parseFloat(document.getElementById("p-price").value);
   if(isNaN(p)){showToast("請輸入有效價格",true);return;}
-  buys=buys.map(b=>b.ticker===priceTargetTicker?{...b,currentPrice:p}:b);
+  const uid=currentUser?.id;
+  try {
+    const { error } = await sb.from('buys').update({currentPrice:p}).eq('ticker',priceTargetTicker).eq('user_id',uid);
+    if(error) throw error;
+    buys=buys.map(b=>b.ticker===priceTargetTicker?{...b,currentPrice:p}:b);
+    saveToLocalCache();
+    updateStorageStatus(true);
+  } catch(e) {
+    console.warn("confirmUpdatePrice 失敗：",e);
+    showToast("儲存失敗，請確認網路連線",true); return;
+  }
   closePriceModal(); render(); showToast("現價已更新");
 }
 function toolbarEdit(){
@@ -1143,18 +1190,28 @@ function toolbarSell(){
   if(!sel||sel.type!=='batch') return;
   openSellModal(sel.batchId);
 }
-function toolbarDelete(){
+async function toolbarDelete(){
   if(!sel) return;
-  enableSave();
+  const uid=currentUser?.id;
   if(sel.type==='group'){
     const g=groups().find(x=>x.ticker===sel.ticker);
     if(!confirm(`確定刪除「${g?.name}」的全部 ${g?.batches.length} 批持倉？\n股息與賣出歷史紀錄不會受影響。`)) return;
-    buys=buys.filter(b=>b.ticker!==sel.ticker);
+    try {
+      const { error } = await sb.from('buys').delete().eq('ticker',sel.ticker).eq('user_id',uid);
+      if(error) throw error;
+      buys=buys.filter(b=>b.ticker!==sel.ticker);
+      saveToLocalCache(); updateStorageStatus(true);
+    } catch(e) { showToast("刪除失敗，請確認網路連線",true); return; }
     sel=null; syncToolbar(); render(); showToast("已刪除整個標的");
   } else {
     const b=buys.find(x=>x.id===sel.batchId);
     if(!confirm(`確定刪除批次？\n${b?.name} ${b?.buyDate} · ${b?.shares}股 @ ${b?.costPerShare}`)) return;
-    buys=buys.filter(x=>x.id!==sel.batchId);
+    try {
+      const { error } = await sb.from('buys').delete().eq('id',sel.batchId).eq('user_id',uid);
+      if(error) throw error;
+      buys=buys.filter(x=>x.id!==sel.batchId);
+      saveToLocalCache(); updateStorageStatus(true);
+    } catch(e) { showToast("刪除失敗，請確認網路連線",true); return; }
     sel=null; syncToolbar(); render(); showToast("已刪除批次");
   }
 }
@@ -1197,7 +1254,7 @@ async function fetchRate() {
       const localTime = now.toLocaleString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
       updatedEl.textContent = `匯率日期 ${apiDate} · 抓取於 ${localTime}`;
       updatedEl.style.color = "var(--neg)";
-      enableSave();
+      upsertPools();
       render();
       showToast(`匯率已更新：1 USD = ${rate.toFixed(4)} TWD`);
       success = true;
@@ -1439,8 +1496,6 @@ function render(){
   });
   document.getElementById("dividendsBody").innerHTML=dr||`<tr><td colspan="9" class="empty-state">尚無股息紀錄。在持倉表選取標的後，點上方「配息」按鈕記錄。</td></tr>`;
 
-  saveToStorage();
-  updateStorageStatus();
 }
 
 function renderTable(){
@@ -1566,8 +1621,7 @@ function closeBuyModal(){
   const priceInput=document.getElementById("b-price");
   costInput.oninput=null; priceInput.oninput=null; priceInput.dataset.manualEdit="";
 }
-function saveBuy(){
-  enableSave();
+async function saveBuy(){
   const name=document.getElementById("b-name").value.trim();
   const ticker=document.getElementById("b-ticker").value.trim().toUpperCase();
   const currency=document.getElementById("b-currency").value;
@@ -1578,10 +1632,27 @@ function saveBuy(){
   const currentPrice=isNaN(priceRaw) ? costPerShare : priceRaw;
   const buyDate=document.getElementById("b-date").value;
   if(!name||!ticker||isNaN(shares)||isNaN(costPerShare)||!buyDate){showToast("請填寫所有必填欄位",true);return;}
-  const entry={id:editBuyId??Date.now(),name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate};
-  if(editBuyId) buys=buys.map(x=>x.id===editBuyId?entry:x);
-  else buys.push(entry);
-  buys=buys.map(b=>b.ticker===ticker?{...b,currentPrice}:b);
+  const uid=currentUser?.id;
+  const entry={id:editBuyId??Date.now(),name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate,user_id:uid};
+  try {
+    if(editBuyId){
+      const { error } = await sb.from('buys').update({name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate}).eq('id',editBuyId).eq('user_id',uid);
+      if(error) throw error;
+      buys=buys.map(x=>x.id===editBuyId?entry:x);
+    } else {
+      const { error } = await sb.from('buys').insert(entry);
+      if(error) throw error;
+      buys.push(entry);
+    }
+    // 同步同一標的所有批次的現價
+    const { error: syncErr } = await sb.from('buys').update({currentPrice}).eq('ticker',ticker).eq('user_id',uid);
+    if(syncErr) throw syncErr;
+    buys=buys.map(b=>b.ticker===ticker?{...b,currentPrice}:b);
+    saveToLocalCache(); updateStorageStatus(true);
+  } catch(e) {
+    console.warn("saveBuy 失敗：",e);
+    showToast("儲存失敗，請確認網路連線",true); return;
+  }
   closeBuyModal(); sel=null; syncToolbar(); render();
   showToast(editBuyId?"已更新批次":"已新增買入紀錄");
 }
@@ -1628,8 +1699,7 @@ function closeSellModal(){
   document.getElementById("s-buyDate").readOnly=true;
   document.getElementById("s-edit-extras").style.display="none";
 }
-function confirmSell(){
-  enableSave();
+async function confirmSell(){
   const ss=parseFloat(document.getElementById("s-shares").value);
   const sp=parseFloat(document.getElementById("s-price").value);
   const sFee=parseFloat(document.getElementById("s-fee").value)||0;
@@ -1645,51 +1715,78 @@ function confirmSell(){
     if(!confirm("賣出日晚於今天，確定要儲存？")) return;
   }
 
-  if(editSellId) {
-    const buyPrice=parseFloat(document.getElementById("s-buyPrice").value);
-    const buyFee=parseFloat(document.getElementById("s-buyFee").value)||0;
-    if(isNaN(buyPrice)){showToast("請填寫買入均價",true);return;}
-    const orig = sells.find(x=>x.id===editSellId); if(!orig) return;
-    const ct = ss*buyPrice + buyFee;
-    const vt = ss*sp - sFee - sTax;
-    const pnl = vt - ct;
-    const hd = dBetween(bd,sd);
-    const ann = (Math.pow(vt/ct,365/hd)-1)*100;
-    sells = sells.map(x => x.id===editSellId ? {
-      ...x, shares:ss, costPerShare:buyPrice, sellPrice:sp,
-      buyFee, sellFee:sFee, sellTax:sTax,
-      buyDate:bd, sellDate:sd, holdDays:hd,
-      realizedPnL:pnl, annualized:ann
-    } : x);
-    closeSellModal(); render();
-    showToast("已更新賣出紀錄");
-  } else {
-    const b=buys.find(x=>x.id===sellTargetId); if(!b) return;
-    if(ss>b.shares){showToast(`賣出股數超過持有股數 (${b.shares})`,true);return;}
-    const buyFeeAlloc = (b.buyFee||0) * (ss/b.shares);
-    const ct = ss*b.costPerShare + buyFeeAlloc;
-    const vt = ss*sp - sFee - sTax;
-    const pnl = vt - ct;
-    const hd = dBetween(b.buyDate,sd);
-    const ann = (Math.pow(vt/ct,365/hd)-1)*100;
-    sells.push({id:Date.now(),name:b.name,ticker:b.ticker,currency:b.currency,
-      shares:ss,costPerShare:b.costPerShare,sellPrice:sp,
-      buyFee:buyFeeAlloc,sellFee:sFee,sellTax:sTax,
-      buyDate:b.buyDate,sellDate:sd,holdDays:hd,
-      realizedPnL:pnl,annualized:ann});
-    if(ss===b.shares) buys=buys.filter(x=>x.id!==sellTargetId);
-    else {
-      const remainingFee = (b.buyFee||0) - buyFeeAlloc;
-      buys=buys.map(x=>x.id===sellTargetId?{...x,shares:x.shares-ss,buyFee:remainingFee}:x);
+  const uid=currentUser?.id;
+  try {
+    if(editSellId) {
+      const buyPrice=parseFloat(document.getElementById("s-buyPrice").value);
+      const buyFee=parseFloat(document.getElementById("s-buyFee").value)||0;
+      if(isNaN(buyPrice)){showToast("請填寫買入均價",true);return;}
+      const orig = sells.find(x=>x.id===editSellId); if(!orig) return;
+      const ct = ss*buyPrice + buyFee;
+      const vt = ss*sp - sFee - sTax;
+      const pnl = vt - ct;
+      const hd = dBetween(bd,sd);
+      const ann = (Math.pow(vt/ct,365/hd)-1)*100;
+      const { error } = await sb.from('sells').update({
+        shares:ss,costPerShare:buyPrice,sellPrice:sp,
+        buyFee,sellFee:sFee,sellTax:sTax,
+        buyDate:bd,sellDate:sd,holdDays:hd,realizedPnL:pnl,annualized:ann
+      }).eq('id',editSellId).eq('user_id',uid);
+      if(error) throw error;
+      sells = sells.map(x => x.id===editSellId ? {
+        ...x,shares:ss,costPerShare:buyPrice,sellPrice:sp,
+        buyFee,sellFee:sFee,sellTax:sTax,
+        buyDate:bd,sellDate:sd,holdDays:hd,realizedPnL:pnl,annualized:ann
+      } : x);
+      saveToLocalCache(); updateStorageStatus(true);
+      closeSellModal(); render();
+      showToast("已更新賣出紀錄");
+    } else {
+      const b=buys.find(x=>x.id===sellTargetId); if(!b) return;
+      if(ss>b.shares){showToast(`賣出股數超過持有股數 (${b.shares})`,true);return;}
+      const buyFeeAlloc = (b.buyFee||0) * (ss/b.shares);
+      const ct = ss*b.costPerShare + buyFeeAlloc;
+      const vt = ss*sp - sFee - sTax;
+      const pnl = vt - ct;
+      const hd = dBetween(b.buyDate,sd);
+      const ann = (Math.pow(vt/ct,365/hd)-1)*100;
+      const newSell = {id:Date.now(),name:b.name,ticker:b.ticker,currency:b.currency,
+        shares:ss,costPerShare:b.costPerShare,sellPrice:sp,
+        buyFee:buyFeeAlloc,sellFee:sFee,sellTax:sTax,
+        buyDate:b.buyDate,sellDate:sd,holdDays:hd,
+        realizedPnL:pnl,annualized:ann,user_id:uid};
+      const { error: sellErr } = await sb.from('sells').insert(newSell);
+      if(sellErr) throw sellErr;
+      sells.push(newSell);
+      if(ss===b.shares){
+        const { error: delErr } = await sb.from('buys').delete().eq('id',sellTargetId).eq('user_id',uid);
+        if(delErr) throw delErr;
+        buys=buys.filter(x=>x.id!==sellTargetId);
+      } else {
+        const remainingFee = (b.buyFee||0) - buyFeeAlloc;
+        const { error: upErr } = await sb.from('buys').update({shares:b.shares-ss,buyFee:remainingFee}).eq('id',sellTargetId).eq('user_id',uid);
+        if(upErr) throw upErr;
+        buys=buys.map(x=>x.id===sellTargetId?{...x,shares:x.shares-ss,buyFee:remainingFee}:x);
+      }
+      saveToLocalCache(); updateStorageStatus(true);
+      closeSellModal(); sel=null; syncToolbar(); render();
+      showToast(`已記錄賣出，損益 ${fmtCur(pnl,b.currency)}`);
     }
-    closeSellModal(); sel=null; syncToolbar(); render();
-    showToast(`已記錄賣出，損益 ${fmtCur(pnl,b.currency)}`);
+  } catch(e) {
+    console.warn("confirmSell 失敗：",e);
+    showToast("儲存失敗，請確認網路連線",true);
   }
 }
-function deleteSell(id){
-  enableSave();
+async function deleteSell(id){
   if(!confirm("確定刪除此交易紀錄？")) return;
-  sells=sells.filter(s=>s.id!==id); render(); showToast("已刪除");
+  const uid=currentUser?.id;
+  try {
+    const { error } = await sb.from('sells').delete().eq('id',id).eq('user_id',uid);
+    if(error) throw error;
+    sells=sells.filter(s=>s.id!==id);
+    saveToLocalCache(); updateStorageStatus(true);
+  } catch(e) { showToast("刪除失敗，請確認網路連線",true); return; }
+  render(); showToast("已刪除");
 }
 
 function openDividendModal(ticker){
@@ -1742,8 +1839,7 @@ function closeDividendModal(){
   divTargetTicker=null; editDividendId=null;
   document.getElementById("d-net").dataset.touched="";
 }
-function confirmDividend(){
-  enableSave();
+async function confirmDividend(){
   const perShare=parseFloat(document.getElementById("d-perShare").value);
   const shares=parseFloat(document.getElementById("d-shares").value);
   const net=parseFloat(document.getElementById("d-net").value);
@@ -1751,23 +1847,40 @@ function confirmDividend(){
   const note=document.getElementById("d-note").value.trim();
   if(isNaN(perShare)||isNaN(shares)||isNaN(net)||!exDate){showToast("請填寫必填欄位",true);return;}
   const grossAmount = perShare*shares;
-
-  if(editDividendId) {
-    dividends = dividends.map(d => d.id===editDividendId
-      ? {...d, perShare, shares, grossAmount, netAmount:net, exDate, note}
-      : d);
-    closeDividendModal(); render(); showToast("已更新配息紀錄");
-  } else {
-    const g=groups().find(x=>x.ticker===divTargetTicker); if(!g) return;
-    dividends.push({id:Date.now(),name:g.name,ticker:g.ticker,currency:g.currency,
-      perShare,shares,grossAmount,netAmount:net,exDate,note});
-    closeDividendModal(); render(); showToast(`已記錄配息 ${fmtCur(net,g.currency)}`);
+  const uid=currentUser?.id;
+  try {
+    if(editDividendId) {
+      const { error } = await sb.from('dividends').update({perShare,shares,grossAmount,netAmount:net,exDate,note}).eq('id',editDividendId).eq('user_id',uid);
+      if(error) throw error;
+      dividends = dividends.map(d => d.id===editDividendId
+        ? {...d,perShare,shares,grossAmount,netAmount:net,exDate,note} : d);
+      saveToLocalCache(); updateStorageStatus(true);
+      closeDividendModal(); render(); showToast("已更新配息紀錄");
+    } else {
+      const g=groups().find(x=>x.ticker===divTargetTicker); if(!g) return;
+      const newDiv={id:Date.now(),name:g.name,ticker:g.ticker,currency:g.currency,
+        perShare,shares,grossAmount,netAmount:net,exDate,note,user_id:uid};
+      const { error } = await sb.from('dividends').insert(newDiv);
+      if(error) throw error;
+      dividends.push(newDiv);
+      saveToLocalCache(); updateStorageStatus(true);
+      closeDividendModal(); render(); showToast(`已記錄配息 ${fmtCur(net,g.currency)}`);
+    }
+  } catch(e) {
+    console.warn("confirmDividend 失敗：",e);
+    showToast("儲存失敗，請確認網路連線",true);
   }
 }
-function deleteDividend(id){
-  enableSave();
+async function deleteDividend(id){
   if(!confirm("確定刪除此配息紀錄？")) return;
-  dividends=dividends.filter(d=>d.id!==id); render(); showToast("已刪除");
+  const uid=currentUser?.id;
+  try {
+    const { error } = await sb.from('dividends').delete().eq('id',id).eq('user_id',uid);
+    if(error) throw error;
+    dividends=dividends.filter(d=>d.id!==id);
+    saveToLocalCache(); updateStorageStatus(true);
+  } catch(e) { showToast("刪除失敗，請確認網路連線",true); return; }
+  render(); showToast("已刪除");
 }
 
 function switchTab(name){
@@ -1792,20 +1905,14 @@ function exportCSV(){
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"}));
   a.download="portfolio.csv"; a.click();
-  markClean();
-  showToast("資料已儲存 ✓");
+  showToast("CSV 已匯出 ✓");
 }
 
 document.getElementById("csvImport").addEventListener("change",function(e){
   const f=e.target.files[0]; if(!f) return;
-  if(_dirty) {
-    if(!confirm("⚠ 目前有未儲存的變動，開啟新檔案會覆蓋這些變動。\n\n建議先按「儲存資料」備份。是否繼續開啟新檔案？")) {
-      e.target.value="";
-      return;
-    }
-  }
+  if(!confirm("開啟 CSV 將覆蓋目前雲端資料，確定要繼續？")) { e.target.value=""; return; }
   const r=new FileReader();
-  r.onload=ev=>{
+  r.onload=async ev=>{
     const text = ev.target.result.replace(/^﻿/, "");
     const lines=text.split("\n").map(l=>l.trim()).filter(Boolean);
     let mode=""; const nb=[],ns=[],nd=[];
@@ -1833,10 +1940,26 @@ document.getElementById("csvImport").addEventListener("change",function(e){
     if(np.usd!==null) document.getElementById("poolUSD").value=np.usd;
     if(np.rate!==null) document.getElementById("usdRate").value=np.rate;
     buys=nb; sells=ns; dividends=nd; sel=null;
-    _saveEnabled = true;
-    markClean();
     syncToolbar(); render();
-    showToast(`已開啟資料：${nb.length} 持倉、${ns.length} 賣出、${nd.length} 股息`);
+    showToast(`已載入：${nb.length} 持倉、${ns.length} 賣出、${nd.length} 股息，同步中…`);
+    const uid=currentUser?.id;
+    try {
+      await Promise.all([
+        sb.from('buys').delete().eq('user_id',uid),
+        sb.from('sells').delete().eq('user_id',uid),
+        sb.from('dividends').delete().eq('user_id',uid),
+      ]);
+      if(nb.length) await sb.from('buys').upsert(nb.map(b=>({...b,user_id:uid})),{onConflict:'id'});
+      if(ns.length) await sb.from('sells').upsert(ns.map(s=>({...s,user_id:uid})),{onConflict:'id'});
+      if(nd.length) await sb.from('dividends').upsert(nd.map(d=>({...d,user_id:uid})),{onConflict:'id'});
+      await upsertPools();
+      saveToLocalCache();
+      updateStorageStatus(true);
+      showToast("已同步至雲端 ✓");
+    } catch(e) {
+      console.warn("CSV 匯入雲端同步失敗：",e);
+      showToast("資料已載入但雲端同步失敗，請稍後重試",true);
+    }
   };
   r.readAsText(f,"UTF-8"); e.target.value="";
 });
@@ -1856,38 +1979,66 @@ function showToast(msg, isError=false){
   document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
 });
 
-window.addEventListener("beforeunload", function(e) {
-  if(_dirty) {
-    e.preventDefault();
-    e.returnValue = "你有未儲存的變動，確定要離開嗎？";
-    return e.returnValue;
-  }
-});
-
 // ══════════════════════════════════════════════════════
 // PORTFOLIO INIT (called after auth succeeds)
 // ══════════════════════════════════════════════════════
-function initPortfolioApp() {
-  if(_appInited) return; // don't re-init on token refresh events
+async function initPortfolioApp() {
+  if(_appInited) return;
   _appInited = true;
 
-  if(_stored.corrupt) {
-    setTimeout(() => alert("⚠ 偵測到 localStorage 資料異常\n\n為保護你的資料，工具暫時不會自動儲存。\n請從「設定」匯入 CSV 備份，或按「重設為範例資料」確認從零開始。"), 500);
+  // Step 1: 從 localStorage 快取快速顯示
+  const cache = loadCacheFromStorage();
+  if(cache?.buys) {
+    buys = cache.buys;
+    sells = cache.sells || [];
+    dividends = cache.dividends || [];
+    if(cache.settings) {
+      const s = cache.settings;
+      if(s.poolTWD !== undefined) document.getElementById("poolTWD").value = s.poolTWD;
+      if(s.poolUSD !== undefined) document.getElementById("poolUSD").value = s.poolUSD;
+      if(s.usdRate !== undefined) document.getElementById("usdRate").value = s.usdRate;
+    }
+    render();
   }
 
-  if(_stored.data?.settings) {
-    const s = _stored.data.settings;
-    if(s.poolTWD !== undefined) document.getElementById("poolTWD").value = s.poolTWD;
-    if(s.poolUSD !== undefined) document.getElementById("poolUSD").value = s.poolUSD;
-    if(s.usdRate !== undefined) document.getElementById("usdRate").value = s.usdRate;
-    if(s.hotThreshold !== undefined) document.getElementById("hotThreshold").value = s.hotThreshold;
-    if(s.oversoldThreshold !== undefined) document.getElementById("oversoldThreshold").value = s.oversoldThreshold;
-  }
+  // Step 2: 從 localStorage 讀閾值（不進 Supabase）
+  try {
+    const th = JSON.parse(localStorage.getItem('portfolio-thresholds') || '{}');
+    if(th.hotThreshold !== undefined) document.getElementById("hotThreshold").value = th.hotThreshold;
+    if(th.oversoldThreshold !== undefined) document.getElementById("oversoldThreshold").value = th.oversoldThreshold;
+  } catch(e) {}
 
-  render();
+  // Step 3: 從 Supabase 拉最新資料（覆蓋快取）
+  await loadFromSupabase();
+
+  // Step 4: 最終 render
   syncToolbar();
-  updateSaveButtonState();
+  render();
 }
+
+// ── 離線 / 復線 / 切換頁面 ──
+window.addEventListener('offline', () => {
+  document.getElementById('offlineBanner').style.display = 'block';
+  updateStorageStatus(false);
+});
+
+window.addEventListener('online', async () => {
+  document.getElementById('offlineBanner').style.display = 'none';
+  try {
+    await syncLocalToSupabase();
+    showToast('已自動同步至雲端 ✓');
+    updateStorageStatus(true);
+  } catch(e) {
+    showToast('自動同步失敗，請手動重整', true);
+  }
+});
+
+document.addEventListener('visibilitychange', async () => {
+  if(document.visibilityState === 'visible' && navigator.onLine && _appInited) {
+    await loadFromSupabase();
+    render();
+  }
+});
 
 // ── Bootstrap ──
 initAuth();
