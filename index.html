@@ -861,9 +861,13 @@ async function loadFromSupabase() {
     if (buysRes.error) throw buysRes.error;
     if (sellsRes.error) throw sellsRes.error;
     if (divsRes.error) throw divsRes.error;
-    buys = buysRes.data || [];
-    sells = sellsRes.data || [];
-    dividends = divsRes.data || [];
+    const hasSupabaseData = buysRes.data?.length || sellsRes.data?.length || divsRes.data?.length;
+    const hasLocalCache = !!loadCacheFromStorage()?.buys?.length;
+    if (hasSupabaseData || !hasLocalCache) {
+      buys = buysRes.data || [];
+      sells = sellsRes.data || [];
+      dividends = divsRes.data || [];
+    }
     if (poolsRes.data?.length) {
       const p = poolsRes.data[0];
       if (p.poolTWD != null) document.getElementById("poolTWD").value = p.poolTWD;
@@ -1945,6 +1949,7 @@ document.getElementById("csvImport").addEventListener("change",function(e){
     const ns2=ns.map(s=>({...s,id:crypto.randomUUID(),user_id:uid}));
     const nd2=nd.map(d=>({...d,id:crypto.randomUUID(),user_id:uid}));
     buys=nb2; sells=ns2; dividends=nd2; sel=null;
+    saveToLocalCache(); // 立刻存快取，不等 Supabase
     syncToolbar(); render();
     showToast(`已載入：${nb.length} 持倉、${ns.length} 賣出、${nd.length} 股息，同步中…`);
     try {
