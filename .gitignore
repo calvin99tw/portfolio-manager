@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# 個人財務資料（不推上 GitHub）
+portfolio.csv
+*.csv
+
+# 本機測試暫存
+*.log
