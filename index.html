@@ -954,7 +954,7 @@ async function resetToSample() {
       sb.from('sells').delete().eq('user_id', uid),
       sb.from('dividends').delete().eq('user_id', uid),
     ]);
-    const sampleBuys = SAMPLE_DATA.buys.map(b => ({...b, user_id: uid}));
+    const sampleBuys = SAMPLE_DATA.buys.map(b => ({...b, id: crypto.randomUUID(), user_id: uid}));
     const { error } = await sb.from('buys').insert(sampleBuys);
     if (error) throw error;
     buys = sampleBuys;
@@ -1633,7 +1633,7 @@ async function saveBuy(){
   const buyDate=document.getElementById("b-date").value;
   if(!name||!ticker||isNaN(shares)||isNaN(costPerShare)||!buyDate){showToast("請填寫所有必填欄位",true);return;}
   const uid=currentUser?.id;
-  const entry={id:editBuyId??Date.now(),name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate,user_id:uid};
+  const entry={id:editBuyId??crypto.randomUUID(),name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate,user_id:uid};
   try {
     if(editBuyId){
       const { error } = await sb.from('buys').update({name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate}).eq('id',editBuyId).eq('user_id',uid);
@@ -1750,7 +1750,7 @@ async function confirmSell(){
       const pnl = vt - ct;
       const hd = dBetween(b.buyDate,sd);
       const ann = (Math.pow(vt/ct,365/hd)-1)*100;
-      const newSell = {id:Date.now(),name:b.name,ticker:b.ticker,currency:b.currency,
+      const newSell = {id:crypto.randomUUID(),name:b.name,ticker:b.ticker,currency:b.currency,
         shares:ss,costPerShare:b.costPerShare,sellPrice:sp,
         buyFee:buyFeeAlloc,sellFee:sFee,sellTax:sTax,
         buyDate:b.buyDate,sellDate:sd,holdDays:hd,
@@ -1858,7 +1858,7 @@ async function confirmDividend(){
       closeDividendModal(); render(); showToast("已更新配息紀錄");
     } else {
       const g=groups().find(x=>x.ticker===divTargetTicker); if(!g) return;
-      const newDiv={id:Date.now(),name:g.name,ticker:g.ticker,currency:g.currency,
+      const newDiv={id:crypto.randomUUID(),name:g.name,ticker:g.ticker,currency:g.currency,
         perShare,shares,grossAmount,netAmount:net,exDate,note,user_id:uid};
       const { error } = await sb.from('dividends').insert(newDiv);
       if(error) throw error;
