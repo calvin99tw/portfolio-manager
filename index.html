@@ -1939,19 +1939,23 @@ document.getElementById("csvImport").addEventListener("change",function(e){
     if(np.twd!==null) document.getElementById("poolTWD").value=np.twd;
     if(np.usd!==null) document.getElementById("poolUSD").value=np.usd;
     if(np.rate!==null) document.getElementById("usdRate").value=np.rate;
-    buys=nb; sells=ns; dividends=nd; sel=null;
+    // 重新產生 UUID（v3 CSV 的數字 id 與 Supabase uuid 欄位不相容）
+    const uid=currentUser?.id;
+    const nb2=nb.map(b=>({...b,id:crypto.randomUUID(),user_id:uid}));
+    const ns2=ns.map(s=>({...s,id:crypto.randomUUID(),user_id:uid}));
+    const nd2=nd.map(d=>({...d,id:crypto.randomUUID(),user_id:uid}));
+    buys=nb2; sells=ns2; dividends=nd2; sel=null;
     syncToolbar(); render();
     showToast(`已載入：${nb.length} 持倉、${ns.length} 賣出、${nd.length} 股息，同步中…`);
-    const uid=currentUser?.id;
     try {
       await Promise.all([
         sb.from('buys').delete().eq('user_id',uid),
         sb.from('sells').delete().eq('user_id',uid),
         sb.from('dividends').delete().eq('user_id',uid),
       ]);
-      if(nb.length) await sb.from('buys').upsert(nb.map(b=>({...b,user_id:uid})),{onConflict:'id'});
-      if(ns.length) await sb.from('sells').upsert(ns.map(s=>({...s,user_id:uid})),{onConflict:'id'});
-      if(nd.length) await sb.from('dividends').upsert(nd.map(d=>({...d,user_id:uid})),{onConflict:'id'});
+      if(nb2.length) await sb.from('buys').insert(nb2);
+      if(ns2.length) await sb.from('sells').insert(ns2);
+      if(nd2.length) await sb.from('dividends').insert(nd2);
       await upsertPools();
       saveToLocalCache();
       updateStorageStatus(true);
