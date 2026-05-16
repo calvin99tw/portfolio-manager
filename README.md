@@ -342,17 +342,6 @@ id,name,ticker,currency,perShare,shares,grossAmount,netAmount,exDate,note
 
 ---
 
-## 開發建議
-
-使用 Claude Cowork 模式持續維護：
-
-1. 在 Cowork 中掛載「投資組合管理工具」資料夾，Claude 可直接讀取 HTML 與 README
-2. 每次想新增功能，直接說「請幫我實作 [功能名稱]」，Claude 會自動讀 README 了解現有狀態
-3. 從「未來開發待辦清單」中挑選功能
-4. 修改完後 Claude 會直接覆蓋資料夾內的檔案，不需要手動上傳/下載
-
-**目前推薦的下一步功能**：自動抓取股價（最有感的改善，但需要找到穩定免費的 API；台股可用證交所開放資料、美股可用 Yahoo Finance 非官方 API）
-
 ---
 
 ## 版號規則
