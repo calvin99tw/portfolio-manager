@@ -147,6 +147,22 @@ body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--te
 .login-sent-sub { font-size: 12px; color: var(--text-3); line-height: 1.7; }
 .login-resend { background: none; border: none; color: var(--accent); font-size: 12px; font-family: 'DM Mono', monospace; cursor: pointer; margin-top: 16px; padding: 0; text-decoration: underline; }
 .login-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.login-otp-input {
+  width: 100%;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 12px;
+  color: var(--text-1);
+  font-family: 'DM Mono', monospace;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.15s;
+}
+.login-otp-input:focus { border-color: var(--accent); }
 
 /* ── Main App ── */
 .header { padding: 28px 32px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
@@ -305,17 +321,26 @@ h1, .heading { color: var(--text-1); }
     <div id="loginEmailStep">
       <label class="login-label" for="loginEmail">電子信箱</label>
       <input class="login-input" type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
-      <button class="login-btn" id="loginBtn" onclick="sendMagicLink()">發送登入連結</button>
+      <button class="login-btn" id="loginBtn" onclick="sendOtp()">送出驗證碼</button>
       <div class="login-msg" id="loginMsg"></div>
     </div>
 
-    <!-- Step 2: Sent confirmation -->
-    <div id="loginSentStep" style="display:none">
-      <div class="login-sent-box">
-        <div class="login-sent-icon">✉️</div>
-        <div class="login-sent-title">登入連結已發送</div>
-        <div class="login-sent-sub">請到 <strong id="loginSentEmail"></strong> 信箱，點擊登入連結即可進入。</div>
+    <!-- Step 2: OTP input -->
+    <div id="loginOtpStep" style="display:none">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;line-height:1.7">
+        驗證碼已寄至 <strong id="loginSentEmail" style="color:var(--text-2)"></strong><br>
+        請輸入信中的 6 位數字
+      </div>
+      <label class="login-label" for="loginOtp">驗證碼</label>
+      <input class="login-otp-input" type="text" id="loginOtp"
+        inputmode="numeric" maxlength="6" placeholder="000000"
+        autocomplete="one-time-code">
+      <button class="login-btn" id="loginVerifyBtn" onclick="verifyOtp()" style="margin-top:14px">確認登入</button>
+      <div class="login-msg" id="loginOtpMsg"></div>
+      <div style="text-align:center;margin-top:14px">
         <button class="login-resend" onclick="showLoginEmailStep()">重新輸入信箱</button>
+        <span style="color:var(--text-5);margin:0 8px">·</span>
+        <button class="login-resend" onclick="resendOtp()">重新發送驗證碼</button>
       </div>
     </div>
 
@@ -640,6 +665,7 @@ const SUPABASE_URL = 'https://ewgduyrxtvwznvvmldtr.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_AHhn53t01w-5zbcClj8V5A_Y3Nqu3bd';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
+let _otpEmail = ''; // 暫存已送出驗證碼的信箱
 
 async function initAuth() {
   const { data: { session } } = await sb.auth.getSession();
@@ -680,7 +706,7 @@ function showLogin() {
   showLoginEmailStep();
 }
 
-async function sendMagicLink() {
+async function sendOtp() {
   const email = document.getElementById('loginEmail').value.trim();
   if (!email) { showLoginMsg('請輸入電子信箱', true); return; }
 
@@ -688,26 +714,66 @@ async function sendMagicLink() {
   btn.disabled = true;
   btn.textContent = '發送中…';
 
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email });
 
   btn.disabled = false;
-  btn.textContent = '發送登入連結';
+  btn.textContent = '送出驗證碼';
 
   if (error) {
     showLoginMsg('發送失敗：' + error.message, true);
   } else {
+    _otpEmail = email;
     document.getElementById('loginSentEmail').textContent = email;
+    document.getElementById('loginOtp').value = '';
     document.getElementById('loginEmailStep').style.display = 'none';
-    document.getElementById('loginSentStep').style.display = '';
+    document.getElementById('loginOtpStep').style.display = '';
+    showOtpMsg('', false);
+    setTimeout(() => document.getElementById('loginOtp').focus(), 50);
+  }
+}
+
+async function verifyOtp() {
+  const token = document.getElementById('loginOtp').value.trim();
+  if (token.length !== 6) { showOtpMsg('請輸入 6 位數驗證碼', true); return; }
+
+  const btn = document.getElementById('loginVerifyBtn');
+  btn.disabled = true;
+  btn.textContent = '驗證中…';
+
+  const { error } = await sb.auth.verifyOtp({
+    email: _otpEmail,
+    token,
+    type: 'email'
+  });
+
+  btn.disabled = false;
+  btn.textContent = '確認登入';
+
+  if (error) {
+    showOtpMsg('驗證失敗：' + (error.message.includes('expired') ? '驗證碼已過期，請重新發送' : error.message), true);
+  }
+  // 成功時 onAuthStateChange 會自動觸發 showApp()
+}
+
+async function resendOtp() {
+  const email = _otpEmail || document.getElementById('loginEmail').value.trim();
+  if (!email) { showLoginEmailStep(); return; }
+
+  showOtpMsg('重新發送中…', false);
+  const { error } = await sb.auth.signInWithOtp({ email });
+
+  if (error) {
+    showOtpMsg('發送失敗：' + error.message, true);
+  } else {
+    document.getElementById('loginOtp').value = '';
+    showOtpMsg('驗證碼已重新發送', false);
+    setTimeout(() => document.getElementById('loginOtp').focus(), 50);
   }
 }
 
 function showLoginEmailStep() {
   document.getElementById('loginEmailStep').style.display = '';
-  document.getElementById('loginSentStep').style.display = 'none';
+  document.getElementById('loginOtpStep').style.display = 'none';
   showLoginMsg('', false);
 }
 
@@ -717,13 +783,26 @@ function showLoginMsg(msg, isError) {
   el.style.color = isError ? 'var(--pos)' : 'var(--neg)';
 }
 
+function showOtpMsg(msg, isError) {
+  const el = document.getElementById('loginOtpMsg');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--pos)' : 'var(--neg)';
+}
+
 async function signOut() {
   await sb.auth.signOut();
 }
 
-// Enter on email input triggers send
+// Enter 鍵快捷：Step 1 送出驗證碼，Step 2 確認登入
 document.getElementById('loginEmail').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') sendMagicLink();
+  if (e.key === 'Enter') sendOtp();
+});
+document.getElementById('loginOtp').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') verifyOtp();
+});
+// OTP 輸入框只允許數字
+document.getElementById('loginOtp').addEventListener('input', function() {
+  this.value = this.value.replace(/\D/g, '').slice(0, 6);
 });
 
 // ══════════════════════════════════════════════════════
