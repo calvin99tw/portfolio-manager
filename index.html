@@ -363,7 +363,7 @@ h1, .heading { color: var(--text-1); }
 <div class="header">
   <div>
     <h1 style="font-family:Syne,sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px">投資組合管理</h1>
-    <p class="subtitle" style="font-size:12px;margin-top:4px">Portfolio Manager v4.0.0 · <span id="storageStatus" style="color:var(--neg)">已儲存於本機</span></p>
+    <p class="subtitle" style="font-size:12px;margin-top:4px">Portfolio Manager v4.0.0 · <span id="storageStatus" style="color:var(--neg)">已儲存於本機</span> · <span id="marketStatus" style="color:var(--text-3)">行情載入中…</span> <span id="btn-refresh-market" onclick="fetchMarketData(true)" title="手動更新行情" style="cursor:pointer;color:var(--text-4);font-size:11px;user-select:none">↻</span></p>
   </div>
   <div class="header-actions">
     <!-- Theme toggle -->
@@ -492,15 +492,14 @@ h1, .heading { color: var(--text-1); }
           <label class="form-label">USD/TWD 匯率（合併檢視用）</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="number" id="usdRate" value="32" step="0.01" oninput="onSettingChange()" style="width:110px">
-            <button class="btn btn-action" id="btn-fetch-rate" onclick="fetchRate()" style="padding:7px 12px;font-size:12px">🔄 抓取</button>
           </div>
-          <div id="rateUpdated" style="font-size:10px;color:var(--text-4);margin-top:4px;height:14px"></div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--text-4);margin-top:14px;line-height:1.7">
         ※ 當有新資金移入投資池，直接修改池總額即可。閒置現金會自動計算（池總額 - 已投入成本 + 已實現損益 + 已收股息）<br>
         ※ 匯率僅用於「合併檢視」模式下將美股部位換算為 TWD，原幣別資料不會被改動<br>
-        ※ 匯率資料來源：<a href="https://github.com/fawazahmed0/exchange-api" target="_blank" style="color:var(--accent);text-decoration:none">fawazahmed0 currency-api</a>（每日更新，無使用限制）
+        ※ 股價來源：TWSE OpenAPI（台股收盤價，每日 15:00 後更新）；匯率來源：fawazahmed0 currency-api（每日更新）<br>
+        ※ 行情於啟動與切回頁面時自動抓取，可點 Header 的 ↻ 手動更新
       </div>
     </div>
 
@@ -1228,54 +1227,87 @@ function setView(mode){
 }
 
 // ══════════════════════════════════════════════════════
-// EXCHANGE RATE - fawazahmed0 currency-api (jsDelivr CDN)
+// MARKET DATA - TWSE (stock prices) + fawazahmed0 (FX rate)
 // ══════════════════════════════════════════════════════
-async function fetchRate() {
-  const btn = document.getElementById("btn-fetch-rate");
-  const updatedEl = document.getElementById("rateUpdated");
-  const originalText = btn.textContent;
-  btn.textContent = "⏳ 抓取中...";
-  btn.disabled = true;
+function updateMarketStatus(text, color) {
+  const el = document.getElementById("marketStatus");
+  if(el) { el.textContent = text; el.style.color = color || "var(--text-3)"; }
+}
 
-  const endpoints = [
+async function fetchMarketData(manual = false) {
+  if(!navigator.onLine) return;
+  updateMarketStatus("行情更新中…", "var(--text-3)");
+
+  let stockSuccess = false;
+  let rateSuccess = false;
+
+  // ── 1. 台股收盤價（TWSE STOCK_DAY_ALL）──
+  try {
+    const res = await fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL");
+    if(res.ok) {
+      const data = await res.json();
+      // 建立 ticker → 收盤價 對照表
+      const priceMap = {};
+      data.forEach(row => {
+        if(row.Code && row.ClosingPrice) {
+          const price = parseFloat(row.ClosingPrice.replace(/,/g, ""));
+          if(!isNaN(price) && price > 0) priceMap[row.Code] = price;
+        }
+      });
+      // 取出持股中所有 TWD ticker（不重複）
+      const twdTickers = [...new Set(buys.filter(b => b.currency === "TWD").map(b => b.ticker))];
+      const uid = currentUser?.id;
+      for(const ticker of twdTickers) {
+        const newPrice = priceMap[ticker];
+        if(newPrice === undefined) continue;
+        // 更新記憶體
+        buys.forEach(b => { if(b.ticker === ticker && b.currency === "TWD") b.currentPrice = newPrice; });
+        // 寫入 Supabase
+        if(uid) {
+          try {
+            await sb.from('buys').update({ currentPrice: newPrice }).eq('ticker', ticker).eq('user_id', uid);
+          } catch(e) { console.warn(`buys 更新現價失敗 (${ticker}):`, e); }
+        }
+      }
+      stockSuccess = true;
+    }
+  } catch(e) {
+    console.warn("台股股價抓取失敗：", e);
+  }
+
+  // ── 2. USD/TWD 匯率（fawazahmed0）──
+  const fxEndpoints = [
     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json",
     "https://currency-api.pages.dev/v1/currencies/usd.json"
   ];
-
-  let success = false;
-  let errorMsg = "";
-
-  for(const url of endpoints) {
+  for(const url of fxEndpoints) {
     try {
       const res = await fetch(url);
-      if(!res.ok) { errorMsg = `HTTP ${res.status}`; continue; }
+      if(!res.ok) continue;
       const data = await res.json();
       const rate = data?.usd?.twd;
-      if(typeof rate !== 'number') { errorMsg = "回傳資料格式異常"; continue; }
+      if(typeof rate !== "number") continue;
       document.getElementById("usdRate").value = rate.toFixed(4);
-      const apiDate = data.date || new Date().toISOString().slice(0,10);
-      const now = new Date();
-      const localTime = now.toLocaleString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12:false});
-      updatedEl.textContent = `匯率日期 ${apiDate} · 抓取於 ${localTime}`;
-      updatedEl.style.color = "var(--neg)";
-      upsertPools();
-      render();
-      showToast(`匯率已更新：1 USD = ${rate.toFixed(4)} TWD`);
-      success = true;
+      rateSuccess = true;
       break;
-    } catch(e) {
-      errorMsg = e.message || "網路錯誤";
-    }
+    } catch(e) { continue; }
   }
 
-  if(!success) {
-    updatedEl.textContent = `抓取失敗：${errorMsg}`;
-    updatedEl.style.color = "var(--pos)";
-    showToast("匯率抓取失敗，請手動輸入或稍後再試", true);
-  }
+  // ── 3. 存回 Supabase pools + 快取 ──
+  if(rateSuccess) await upsertPools();
+  else saveToLocalCache();
 
-  btn.textContent = originalText;
-  btn.disabled = false;
+  // ── 4. render + 更新狀態 ──
+  render();
+  const now = new Date();
+  const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
+  if(stockSuccess || rateSuccess) {
+    updateMarketStatus(`行情已更新 · ${time}`, "var(--neg)");
+    if(manual) showToast("行情已更新 ✓");
+  } else {
+    updateMarketStatus("行情更新失敗", "var(--pos)");
+    if(manual) showToast("行情抓取失敗，請稍後再試", true);
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -2024,6 +2056,9 @@ async function initPortfolioApp() {
   // Step 4: 最終 render
   syncToolbar();
   render();
+
+  // Step 5: 自動抓取行情（股價 + 匯率）
+  fetchMarketData();
 }
 
 // ── 離線 / 復線 / 切換頁面 ──
@@ -2047,6 +2082,7 @@ document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState === 'visible' && navigator.onLine && _appInited) {
     await loadFromSupabase();
     render();
+    fetchMarketData();
   }
 });
 
