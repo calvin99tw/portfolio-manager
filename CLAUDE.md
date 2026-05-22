@@ -58,11 +58,11 @@ dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmo
 | T2 | GitHub repo + Pages 設定 | ✅ 完成 | Pages 上線，Supabase URL Configuration 已更新 |
 | T3 | App 加入登入功能 | ✅ 完成 | index.html 建立，OTP 驗證碼登入，session 預設一週，資料層暫時還是 localStorage |
 | T4 | 資料層換成 Supabase | ✅ 完成 | localStorage → Supabase，localStorage 降級為快取，離線同步，詳見 docs/T4-summary.md |
-| T5 | 台股股價自動抓取 | ⏳ 待執行 | TWSE OpenAPI，需實測 CORS |
-| T6 | 美股股價自動抓取 | ⏳ 待執行 | Yahoo Finance，需實測 CORS |
+| T5 | 台股股價自動抓取 | ✅ 完成 | TWSE + CBC，Cloudflare Worker proxy，詳見 docs/T5-summary.md |
+| T6 | 美股股價自動抓取 | ⏳ 待執行 | Yahoo Finance，可共用現有 Cloudflare Worker |
 | T7 | 資料移轉 + 正式切換 | ⏳ 待執行 | CSV 匯入 Supabase，取代現有版本 |
 
-**備案**：若 T5/T6 CORS 不通，加 Cloudflare Workers proxy（免費方案每日 10 萬次請求）
+**Cloudflare Worker**：`https://raspy-cherry-f806.calvin99-tw.workers.dev`（已部署，代理 TWSE / CBC / TAIFEX）
 
 ---
 
