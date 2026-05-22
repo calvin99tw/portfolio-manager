@@ -1240,6 +1240,7 @@ async function fetchMarketData(manual = false) {
 
   let stockSuccess = false;
   let rateSuccess = false;
+  let stockDate = "";  // 收盤價日期，格式 MM/DD
 
   // ── 1. 台股收盤價（TWSE STOCK_DAY_ALL）──
   try {
@@ -1247,6 +1248,10 @@ async function fetchMarketData(manual = false) {
     const res = await fetch(`${TWSE_PROXY}/v1/exchangeReport/STOCK_DAY_ALL`);
     if(res.ok) {
       const data = await res.json();
+      // 取資料日期（民國年格式 1150521 → 05/21）
+      if(data[0]?.Date?.length === 7) {
+        stockDate = `${data[0].Date.slice(3,5)}/${data[0].Date.slice(5,7)}`;
+      }
       // 建立 ticker → 收盤價 對照表
       const priceMap = {};
       data.forEach(row => {
@@ -1303,7 +1308,8 @@ async function fetchMarketData(manual = false) {
   const now = new Date();
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
   if(stockSuccess || rateSuccess) {
-    updateMarketStatus(`行情已更新 · ${time}`, "var(--neg)");
+    const dateLabel = stockDate ? `收盤 ${stockDate} · ` : "";
+    updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
     if(manual) showToast("行情已更新 ✓");
   } else {
     updateMarketStatus("行情更新失敗", "var(--pos)");
