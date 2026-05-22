@@ -1243,7 +1243,8 @@ async function fetchMarketData(manual = false) {
 
   // ── 1. 台股收盤價（TWSE STOCK_DAY_ALL）──
   try {
-    const res = await fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL");
+    const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
+    const res = await fetch(`${TWSE_PROXY}/v1/exchangeReport/STOCK_DAY_ALL`);
     if(res.ok) {
       const data = await res.json();
       // 建立 ticker → 收盤價 對照表
