@@ -499,7 +499,7 @@ h1, .heading { color: var(--text-1); }
       <div style="font-size:11px;color:var(--text-4);margin-top:14px;line-height:1.7">
         ※ 當有新資金移入投資池，直接修改池總額即可。閒置現金會自動計算（池總額 - 已投入成本 + 已實現損益 + 已收股息）<br>
         ※ 匯率僅用於「合併檢視」模式下將美股部位換算為 TWD，原幣別資料不會被改動<br>
-        ※ 股價來源：TWSE OpenAPI（台股收盤價，每日 15:00 後更新）；匯率來源：fawazahmed0 currency-api（每日更新）<br>
+        ※ 股價來源：TWSE OpenAPI（台股收盤價，每日 15:00 後更新）；匯率來源：中央銀行 CBC（每日更新）<br>
         ※ 行情於啟動與切回頁面時自動抓取，可點 Header 的 ↻ 手動更新
       </div>
     </div>
@@ -1227,7 +1227,7 @@ function setView(mode){
 }
 
 // ══════════════════════════════════════════════════════
-// MARKET DATA - TWSE (stock prices) + fawazahmed0 (FX rate)
+// MARKET DATA - TWSE (stock prices) + CBC (FX rate)
 // ══════════════════════════════════════════════════════
 function updateMarketStatus(text, color) {
   const el = document.getElementById("marketStatus");
@@ -1300,22 +1300,39 @@ async function fetchMarketData(manual = false) {
     console.warn("台股股價抓取失敗：", e);
   }
 
-  // ── 2. USD/TWD 匯率（fawazahmed0）──
-  const fxEndpoints = [
-    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json",
-    "https://currency-api.pages.dev/v1/currencies/usd.json"
-  ];
-  for(const url of fxEndpoints) {
-    try {
-      const res = await fetch(url);
-      if(!res.ok) continue;
-      const data = await res.json();
-      const rate = data?.usd?.twd;
-      if(typeof rate !== "number") continue;
-      document.getElementById("usdRate").value = rate.toFixed(4);
-      rateSuccess = true;
-      break;
-    } catch(e) { continue; }
+  // ── 2. USD/TWD 匯率（CBC 中央銀行為主，fawazahmed0 為備援）──
+  try {
+    const res = await fetch(`${TWSE_PROXY}/cbc/api/OpenData/FTDOpenData_Day`);
+    if(res.ok) {
+      const text = await res.text();
+      const xml = new DOMParser().parseFromString(text, "text/xml");
+      const nodes = xml.getElementsByTagName("NTD_USD");
+      const rate = parseFloat(nodes[nodes.length - 1]?.textContent);
+      if(!isNaN(rate) && rate > 0) {
+        document.getElementById("usdRate").value = rate.toFixed(4);
+        rateSuccess = true;
+      }
+    }
+  } catch(e) { console.warn("CBC 匯率抓取失敗：", e); }
+
+  if(!rateSuccess) {
+    // 備援：fawazahmed0
+    const fxEndpoints = [
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json",
+      "https://currency-api.pages.dev/v1/currencies/usd.json"
+    ];
+    for(const url of fxEndpoints) {
+      try {
+        const res = await fetch(url);
+        if(!res.ok) continue;
+        const data = await res.json();
+        const rate = data?.usd?.twd;
+        if(typeof rate !== "number") continue;
+        document.getElementById("usdRate").value = rate.toFixed(4);
+        rateSuccess = true;
+        break;
+      } catch(e) { continue; }
+    }
   }
 
   // ── 3. 存回 Supabase pools + 快取 ──
