@@ -1371,7 +1371,7 @@ function render(){
           <div><div class="pool-stat-label">閒置現金</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.idle)}</div><div class="pool-stat-sub">可加碼/新標的</div></div>
           <div><div class="pool-stat-label">持股市值</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.marketValue)}</div></div>
           <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(twdPool.unrealized)}">NT$ ${fmtN(twdPool.unrealized)}</div></div>
-          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.dividendsTotal)}</div><div class="pool-stat-sub">${dividends.filter(d=>d.currency==="TWD").length} 筆</div></div>
+          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${twdPool.dividendsTotal!==0?pnlClass(twdPool.dividendsTotal):''}">NT$ ${fmtN(twdPool.dividendsTotal)}</div><div class="pool-stat-sub">${dividends.filter(d=>d.currency==="TWD").length} 筆</div></div>
           <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${twdPool.realized!==0?pnlClass(twdPool.realized):''}">NT$ ${fmtN(twdPool.realized)}</div><div class="pool-stat-sub">${sells.filter(s=>s.currency==="TWD").length} 筆賣出</div></div>
         </div>
         <div class="pool-divider"></div>
@@ -1392,7 +1392,7 @@ function render(){
           <div><div class="pool-stat-label">閒置現金</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.idle,"USD")}</div><div class="pool-stat-sub">可加碼/新標的</div></div>
           <div><div class="pool-stat-label">持股市值</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.marketValue,"USD")}</div></div>
           <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(usdPool.unrealized)}">$ ${fmtMoney(usdPool.unrealized,"USD")}</div></div>
-          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.dividendsTotal,"USD")}</div><div class="pool-stat-sub">${dividends.filter(d=>d.currency==="USD").length} 筆</div></div>
+          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${usdPool.dividendsTotal!==0?pnlClass(usdPool.dividendsTotal):''}">$ ${fmtMoney(usdPool.dividendsTotal,"USD")}</div><div class="pool-stat-sub">${dividends.filter(d=>d.currency==="USD").length} 筆</div></div>
           <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${usdPool.realized!==0?pnlClass(usdPool.realized):''}">$ ${fmtMoney(usdPool.realized,"USD")}</div><div class="pool-stat-sub">${sells.filter(s=>s.currency==="USD").length} 筆賣出</div></div>
         </div>
         <div class="pool-divider"></div>
@@ -1426,7 +1426,7 @@ function render(){
         {l:"持股市值",  v:`NT$ ${fmtN(marketVal)}`,s:"目前市值",cls:""},
         {l:"未實現損益",v:`NT$ ${fmtN(unrealized)}`,s:fmtPct(trp),cls:pnlClass(unrealized)},
         {l:"已實現損益",v:`NT$ ${fmtN(realized)}`,s:`${sells.length} 筆賣出`,cls:realized!==0?pnlClass(realized):""},
-        {l:"已收股息",  v:`NT$ ${fmtN(divs)}`,s:`${dividends.length} 筆配息`,cls:""},
+        {l:"已收股息",  v:`NT$ ${fmtN(divs)}`,s:`${dividends.length} 筆配息`,cls:divs!==0?pnlClass(divs):""},
         {l:"真實總報酬",v:`NT$ ${fmtN(totalReturn)}`,s:fmtPct(totalRetPct),cls:pnlClass(totalReturn)},
       ].map(x=>`<div class="card summary-card"><div class="s-label">${x.l}</div><div class="s-value ${x.cls}">${x.v}</div><div class="s-sub">${x.s}</div></div>`).join("")}
     </div>`;
