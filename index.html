@@ -1039,7 +1039,8 @@ function pnlClassDim(n) { return n>=0 ? 't-pos-dim' : 't-neg-dim'; }
 
 function fmtAnnualized(annPct, holdDays) {
   if(holdDays < 365) {
-    return `<span class="t-muted">—</span>`;
+    const daysLeft = Math.ceil(365 - holdDays);
+    return `<span class="t-muted" title="持有滿 365 天後顯示年化報酬" style="font-size:10px">${daysLeft} 天後</span>`;
   }
   const cls = annPct>=0 ? 't-pos-dim' : 't-neg-dim';
   return `<span class="${cls}">${fmtPct(annPct)}</span>`;
