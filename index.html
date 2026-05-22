@@ -1037,11 +1037,9 @@ const dBetween=(d1,d2)=>Math.max(1,Math.floor((new Date(d2)-new Date(d1))/864000
 function pnlClass(n) { return n>=0 ? 't-pos' : 't-neg'; }
 function pnlClassDim(n) { return n>=0 ? 't-pos-dim' : 't-neg-dim'; }
 
-const SHORT_TERM_DAYS = 30;
 function fmtAnnualized(annPct, holdDays) {
-  if(holdDays < SHORT_TERM_DAYS) {
-    const tooltip = `持有僅 ${holdDays} 天，年化僅為數學推算（假設此報酬率每 ${holdDays} 天重複），短期內參考價值有限`;
-    return `<span class="t-muted" title="${tooltip}" style="opacity:0.7">${fmtPct(annPct)} <span style="font-size:9px">⚠</span></span>`;
+  if(holdDays < 365) {
+    return `<span class="t-muted">—</span>`;
   }
   const cls = annPct>=0 ? 't-pos-dim' : 't-neg-dim';
   return `<span class="${cls}">${fmtPct(annPct)}</span>`;
