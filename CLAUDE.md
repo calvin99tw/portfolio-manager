@@ -21,7 +21,7 @@
 | 儲存 | localStorage + CSV | Supabase（PostgreSQL） |
 | 托管 | 本機 file:// | GitHub Pages（HTTPS） |
 | 股價 | 手動輸入 | TWSE OpenAPI（台股，T5 完成）+ Yahoo Finance（美股，T6 待執行） |
-| 匯率 | 手動輸入 | CBC 中央銀行（USD/TWD，T5 完成） |
+| 匯率 | fawazahmed0（手動觸發） | CBC 中央銀行（自動抓取，T5 完成） |
 | 登入 | 無 | Supabase Email Magic Link |
 
 **平行開發原則**：`投資組合管理.html` 完全不動，`index.html` 為 v4 新檔，T7 完成後才正式取代。
