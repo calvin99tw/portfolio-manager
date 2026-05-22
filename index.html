@@ -1358,6 +1358,16 @@ function render(){
     const twdTotalRetPct = twdTotalCost>0 ? twdTotalReturn/twdTotalCost*100 : 0;
     const usdTotalRetPct = usdTotalCost>0 ? usdTotalReturn/usdTotalCost*100 : 0;
 
+    // 池年化：以現有持倉的股數加權平均持有天數計算
+    const twdBuys = buys.filter(b=>b.currency==="TWD");
+    const twdSharesAll = twdBuys.reduce((a,b)=>a+b.shares,0);
+    const twdPoolWd = twdSharesAll>0 ? twdBuys.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/twdSharesAll : 0;
+    const twdPoolAnn = twdPoolWd>0&&twdTotalCost>0 ? (Math.pow((twdTotalCost+twdTotalReturn)/twdTotalCost,365/twdPoolWd)-1)*100 : 0;
+    const usdBuys = buys.filter(b=>b.currency==="USD");
+    const usdSharesAll = usdBuys.reduce((a,b)=>a+b.shares,0);
+    const usdPoolWd = usdSharesAll>0 ? usdBuys.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/usdSharesAll : 0;
+    const usdPoolAnn = usdPoolWd>0&&usdTotalCost>0 ? (Math.pow((usdTotalCost+usdTotalReturn)/usdTotalCost,365/usdPoolWd)-1)*100 : 0;
+
     container.innerHTML = `<div class="pools-row">
       <div class="pool-card">
         <div class="pool-header">
@@ -1379,6 +1389,7 @@ function render(){
           <span><span class="pool-key-value ${pnlClass(twdTotalReturn)}">NT$ ${fmtN(twdTotalReturn)}</span><span class="pool-key-pct ${pnlClass(twdTotalRetPct)}">${fmtPct(twdTotalRetPct)}</span></span>
         </div>
         <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 NT$ ${fmtN(twdTotalCost)}</div>
+        <div style="font-size:10px;color:var(--text-4);margin-top:6px">年化報酬 ${fmtAnnualized(twdPoolAnn, twdPoolWd)}</div>
       </div>
       <div class="pool-card">
         <div class="pool-header">
@@ -1400,6 +1411,7 @@ function render(){
           <span><span class="pool-key-value ${pnlClass(usdTotalReturn)}">$ ${fmtMoney(usdTotalReturn,"USD")}</span><span class="pool-key-pct ${pnlClass(usdTotalRetPct)}">${fmtPct(usdTotalRetPct)}</span></span>
         </div>
         <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 $ ${fmtMoney(usdTotalCost,"USD")}</div>
+        <div style="font-size:10px;color:var(--text-4);margin-top:6px">年化報酬 ${fmtAnnualized(usdPoolAnn, usdPoolWd)}</div>
       </div>
     </div>`;
   } else {
@@ -1416,6 +1428,9 @@ function render(){
     const usdSoldCost = sells.filter(s=>s.currency==="USD").reduce((a,s)=>a + s.shares*s.costPerShare, 0);
     const totalCost = invested + twdSoldCost + toTWD(usdSoldCost,"USD");
     const totalRetPct = totalCost>0 ? totalReturn/totalCost*100 : 0;
+    const mergedSharesAll = buys.reduce((a,b)=>a+b.shares,0);
+    const mergedPoolWd = mergedSharesAll>0 ? buys.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/mergedSharesAll : 0;
+    const mergedPoolAnn = mergedPoolWd>0&&totalCost>0 ? (Math.pow((totalCost+totalReturn)/totalCost,365/mergedPoolWd)-1)*100 : 0;
 
     container.innerHTML = `
       <div class="pool-card">
@@ -1438,6 +1453,7 @@ function render(){
           <span><span class="pool-key-value ${pnlClass(totalReturn)}">NT$ ${fmtN(totalReturn)}</span><span class="pool-key-pct ${pnlClass(totalRetPct)}">${fmtPct(totalRetPct)}</span></span>
         </div>
         <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 NT$ ${fmtN(totalCost)}</div>
+        <div style="font-size:10px;color:var(--text-4);margin-top:6px">年化報酬 ${fmtAnnualized(mergedPoolAnn, mergedPoolWd)}</div>
       </div>`;
   }
 
