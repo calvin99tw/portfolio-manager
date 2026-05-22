@@ -1418,18 +1418,28 @@ function render(){
     const totalCost = invested + twdSoldCost + toTWD(usdSoldCost,"USD");
     const totalRetPct = totalCost>0 ? totalReturn/totalCost*100 : 0;
 
-    container.innerHTML = `<div class="summary-grid">
-      ${[
-        {l:"合併池總額",v:`NT$ ${fmtN(total)}`,s:`匯率 ${getRate()}`,cls:""},
-        {l:"已投入成本",v:`NT$ ${fmtN(invested)}`,s:`佔 ${total>0?(invested/total*100).toFixed(1):0}%`,cls:""},
-        {l:"閒置現金",  v:`NT$ ${fmtN(idle)}`,s:`佔 ${total>0?(idle/total*100).toFixed(1):0}%`,cls:""},
-        {l:"持股市值",  v:`NT$ ${fmtN(marketVal)}`,s:"目前市值",cls:""},
-        {l:"未實現損益",v:`NT$ ${fmtN(unrealized)}`,s:fmtPct(trp),cls:pnlClass(unrealized)},
-        {l:"已實現損益",v:`NT$ ${fmtN(realized)}`,s:`${sells.length} 筆賣出`,cls:realized!==0?pnlClass(realized):""},
-        {l:"已收股息",  v:`NT$ ${fmtN(divs)}`,s:`${dividends.length} 筆配息`,cls:divs!==0?pnlClass(divs):""},
-        {l:"真實總報酬",v:`NT$ ${fmtN(totalReturn)}`,s:fmtPct(totalRetPct),cls:pnlClass(totalReturn)},
-      ].map(x=>`<div class="card summary-card"><div class="s-label">${x.l}</div><div class="s-value ${x.cls}">${x.v}</div><div class="s-sub">${x.s}</div></div>`).join("")}
-    </div>`;
+    container.innerHTML = `
+      <div class="pool-card">
+        <div class="pool-header">
+          <div class="pool-title">合併池 · TWD 換算</div>
+          <span class="${pnlClass(unrealized)}" style="font-size:11px">未實現 ${fmtPct(trp)}</span>
+        </div>
+        <div class="pool-stats">
+          <div><div class="pool-stat-label">池總額</div><div class="pool-stat-value">NT$ ${fmtN(total)}</div><div class="pool-stat-sub">匯率 ${getRate()}</div></div>
+          <div><div class="pool-stat-label">已投入成本</div><div class="pool-stat-value">NT$ ${fmtN(invested)}</div><div class="pool-stat-sub">${total>0?(invested/total*100).toFixed(1):0}% 使用</div></div>
+          <div><div class="pool-stat-label">閒置現金</div><div class="pool-stat-value">NT$ ${fmtN(idle)}</div><div class="pool-stat-sub">可加碼/新標的</div></div>
+          <div><div class="pool-stat-label">持股市值</div><div class="pool-stat-value">NT$ ${fmtN(marketVal)}</div></div>
+          <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(unrealized)}">NT$ ${fmtN(unrealized)}</div></div>
+          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${divs!==0?pnlClass(divs):''}">NT$ ${fmtN(divs)}</div><div class="pool-stat-sub">${dividends.length} 筆</div></div>
+          <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${realized!==0?pnlClass(realized):''}">NT$ ${fmtN(realized)}</div><div class="pool-stat-sub">${sells.length} 筆賣出</div></div>
+        </div>
+        <div class="pool-divider"></div>
+        <div class="pool-key-stat">
+          <span class="pool-key-label">真實總報酬</span>
+          <span><span class="pool-key-value ${pnlClass(totalReturn)}">NT$ ${fmtN(totalReturn)}</span><span class="pool-key-pct ${pnlClass(totalRetPct)}">${fmtPct(totalRetPct)}</span></span>
+        </div>
+        <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 NT$ ${fmtN(totalCost)}</div>
+      </div>`;
   }
 
   // ── Allocation bar ──
