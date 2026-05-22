@@ -1241,10 +1241,10 @@ async function fetchMarketData(manual = false) {
   let stockSuccess = false;
   let rateSuccess = false;
   let stockDate = "";  // 收盤價日期，格式 MM/DD
+  const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
 
   // ── 1. 台股收盤價（優先用官網盤後資料，fallback 用 OpenAPI）──
   try {
-    const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
     const today = new Date().toISOString().slice(0,10).replace(/-/g,"");
     let priceMap = {};
 
@@ -1304,10 +1304,8 @@ async function fetchMarketData(manual = false) {
   try {
     const res = await fetch(`${TWSE_PROXY}/cbc/api/OpenData/FTDOpenData_Day`);
     if(res.ok) {
-      const text = await res.text();
-      const xml = new DOMParser().parseFromString(text, "text/xml");
-      const nodes = xml.getElementsByTagName("NTD_USD");
-      const rate = parseFloat(nodes[nodes.length - 1]?.textContent);
+      const data = await res.json();
+      const rate = parseFloat(data[data.length - 1]?.["NTD_USD"]);
       if(!isNaN(rate) && rate > 0) {
         document.getElementById("usdRate").value = rate.toFixed(4);
         rateSuccess = true;
