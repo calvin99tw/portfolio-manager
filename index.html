@@ -364,7 +364,7 @@ h1, .heading { color: var(--text-1); }
 <div class="header">
   <div>
     <h1 style="font-family:Syne,sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px">投資組合管理</h1>
-    <p class="subtitle" style="font-size:12px;margin-top:4px">Portfolio Manager v4.0.0 · <span id="storageStatus" style="color:var(--neg)">已儲存於本機</span> · <span id="marketStatus" style="color:var(--text-3)">行情載入中…</span> <span id="btn-refresh-market" onclick="fetchMarketData(true)" title="手動更新行情" style="cursor:pointer;color:var(--text-4);font-size:11px;user-select:none">↻</span></p>
+    <p class="subtitle" style="font-size:12px;margin-top:4px">Portfolio Manager v4.0.0 · <span id="storageStatus" style="color:var(--neg)">已儲存於本機</span> · <span id="marketStatus" style="color:var(--text-3)">行情載入中…</span> <button id="btn-refresh-market" onclick="fetchMarketData(true)" title="手動更新行情" style="cursor:pointer;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:12px;color:var(--text-2);margin-left:4px;line-height:1.4;font-family:inherit">↻</button></p>
   </div>
   <div class="header-actions">
     <!-- Theme toggle -->
@@ -447,7 +447,7 @@ h1, .heading { color: var(--text-1); }
 
   <!-- ═══ HISTORY TAB ═══ -->
   <div class="tab-content" id="tab-history">
-    <div class="summary-grid" id="realizedSummaryGrid"></div>
+    <div class="card" id="realizedSummaryGrid" style="margin-bottom:16px"></div>
     <div class="card" style="overflow:hidden">
       <div class="section-header"><span>已實現交易紀錄（賣出）</span></div>
       <div class="table-wrap">
@@ -466,7 +466,7 @@ h1, .heading { color: var(--text-1); }
 
   <!-- ═══ DIVIDENDS TAB ═══ -->
   <div class="tab-content" id="tab-dividends">
-    <div class="summary-grid" id="dividendSummaryGrid"></div>
+    <div class="card" id="dividendSummaryGrid" style="margin-bottom:16px"></div>
     <div class="card" style="overflow:hidden">
       <div class="section-header"><span>股息發放紀錄</span></div>
       <div class="table-wrap">
@@ -550,7 +550,7 @@ h1, .heading { color: var(--text-1); }
         <div><span style="color:var(--text-2)">標的佔池比</span> = 該標的成本 / 對應池總額 × 100</div>
         <div><span style="color:var(--text-2)">真實總報酬</span> = 未實現損益 + 已實現損益 + 已收股息</div>
         <div><span style="color:var(--text-2)">真實總報酬率</span> = 真實總報酬 / 累計投入成本（目前持倉成本 + 已賣出股票的買入成本）</div>
-        <div style="margin-top:6px;color:var(--text-4)">※ 持倉表格皆以原幣別呈現；合併檢視才換算為 TWD；年化報酬最少以 1 天計算</div>
+        <div style="margin-top:6px;color:var(--text-4)">※ 持倉表格皆以原幣別呈現；合併檢視才換算為 TWD；年化報酬需持有滿 365 天後才顯示</div>
         <div style="margin-top:4px;color:var(--text-4)">※ 顏色語意：<span class="t-pos">紅色 = 正/漲/獲利</span>，<span class="t-neg">綠色 = 負/跌/虧損</span>（亞洲市場慣例）</div>
       </div>
     </div>
@@ -1522,11 +1522,11 @@ function render(){
   // ── History tab ──
   const rTotalTWD = sells.reduce((a,s)=>a+toTWD(s.realizedPnL,s.currency),0);
   const rWin = sells.filter(s=>s.realizedPnL>0).length;
-  document.getElementById("realizedSummaryGrid").innerHTML=[
-    {l:"已實現損益（合併TWD）",v:`NT$ ${fmtN(rTotalTWD)}`,s:`共 ${sells.length} 筆`,cls:rTotalTWD!==0?pnlClass(rTotalTWD):""},
-    {l:"獲利筆數",v:rWin+"筆",s:`勝率 ${sells.length>0?(rWin/sells.length*100).toFixed(0):0}%`,cls:""},
-    {l:"虧損筆數",v:(sells.length-rWin)+"筆",s:"已平倉",cls:""},
-  ].map(x=>`<div class="card summary-card"><div class="s-label">${x.l}</div><div class="s-value ${x.cls}">${x.v}</div><div class="s-sub">${x.s}</div></div>`).join("");
+  document.getElementById("realizedSummaryGrid").innerHTML=`<div class="pool-stats" style="padding:0">
+    <div><div class="pool-stat-label">已實現損益（合併TWD）</div><div class="pool-stat-value ${rTotalTWD!==0?pnlClass(rTotalTWD):''}">NT$ ${fmtN(rTotalTWD)}</div><div class="pool-stat-sub">共 ${sells.length} 筆</div></div>
+    <div><div class="pool-stat-label">獲利筆數</div><div class="pool-stat-value">${rWin} 筆</div><div class="pool-stat-sub">勝率 ${sells.length>0?(rWin/sells.length*100).toFixed(0):0}%</div></div>
+    <div><div class="pool-stat-label">虧損筆數</div><div class="pool-stat-value">${sells.length-rWin} 筆</div><div class="pool-stat-sub">已平倉</div></div>
+  </div>`;
   let hr="";
   [...sells].reverse().forEach(s=>{
     const c=pnlClass(s.realizedPnL);
@@ -1560,11 +1560,11 @@ function render(){
   const divTotalTWD = dividends.reduce((a,d)=>a+toTWD(d.netAmount,d.currency),0);
   const divCountTWD = dividends.filter(d=>d.currency==="TWD").length;
   const divCountUSD = dividends.filter(d=>d.currency==="USD").length;
-  document.getElementById("dividendSummaryGrid").innerHTML=[
-    {l:"累計股息（合併TWD）",v:`NT$ ${fmtMoney(divTotalTWD,"TWD")}`,s:`共 ${dividends.length} 筆`},
-    {l:"台股股息",v:`NT$ ${fmtMoney(twdPool.dividendsTotal,"TWD")}`,s:`${divCountTWD} 筆`},
-    {l:"美股股息",v:`$ ${fmtMoney(usdPool.dividendsTotal,"USD")}`,s:`${divCountUSD} 筆`},
-  ].map(x=>`<div class="card summary-card"><div class="s-label">${x.l}</div><div class="s-value">${x.v}</div><div class="s-sub">${x.s}</div></div>`).join("");
+  document.getElementById("dividendSummaryGrid").innerHTML=`<div class="pool-stats" style="padding:0">
+    <div><div class="pool-stat-label">累計股息（合併TWD）</div><div class="pool-stat-value ${divTotalTWD!==0?pnlClass(divTotalTWD):''}">NT$ ${fmtMoney(divTotalTWD,"TWD")}</div><div class="pool-stat-sub">共 ${dividends.length} 筆</div></div>
+    <div><div class="pool-stat-label">台股股息</div><div class="pool-stat-value ${twdPool.dividendsTotal!==0?pnlClass(twdPool.dividendsTotal):''}">NT$ ${fmtMoney(twdPool.dividendsTotal,"TWD")}</div><div class="pool-stat-sub">${divCountTWD} 筆</div></div>
+    <div><div class="pool-stat-label">美股股息</div><div class="pool-stat-value ${usdPool.dividendsTotal!==0?pnlClass(usdPool.dividendsTotal):''}">$ ${fmtMoney(usdPool.dividendsTotal,"USD")}</div><div class="pool-stat-sub">${divCountUSD} 筆</div></div>
+  </div>`;
   let dr="";
   [...dividends].reverse().forEach(d=>{
     dr+=`<tr class="history-row">
@@ -1605,7 +1605,7 @@ function renderTable(){
       <td>${fmtCur(g.tv,g.currency)}</td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
       <td><span class="${pnlClass(g.pct)} fw-500">${fmtPct(g.pct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${mw}%;background:${si.color}"></div></div></td>
-      <td class="t-muted">${fmtCur(g.td,g.currency)}</td>
+      <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}</td>
       <td class="${pnlClass(g.ret)} fw-500">${fmtCur(g.ret,g.currency)}</td>
       <td>${fmtAnnualized(g.ann, Math.round(g.wd))}</td>
       <td><span class="t-muted">${g.ap.toFixed(1)}%</span><div class="meter-bar"><div class="meter-fill" style="width:${aw}%"></div></div></td>
@@ -1634,7 +1634,7 @@ function renderTable(){
         <td class="t-muted" style="font-size:12px">${fmtCur(bv,g.currency)}</td>
         <td class="${pnlClass(bp)}" style="font-size:12px">${fmtCur(bp,g.currency)}</td>
         <td style="font-size:12px"><span class="${pnlClass(bpct)}">${fmtPct(bpct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${Math.min(Math.abs(bpct),50)*2}%;background:${bsi.color}"></div></div></td>
-        <td class="t-muted" style="font-size:12px">${fmtCur(bd,g.currency)}</td>
+        <td class="${bd!==0?pnlClass(bd):'t-muted'}" style="font-size:12px">${fmtCur(bd,g.currency)}</td>
         <td class="${pnlClass(br)}" style="font-size:12px">${fmtCur(br,g.currency)}</td>
         <td style="font-size:12px">${fmtAnnualized(ba, bdays)}</td>
         <td></td><td></td>
