@@ -705,6 +705,7 @@ function setTheme(pref) {
   ['light','system','dark'].forEach(p =>
     document.getElementById('theme-'+p).classList.toggle('active', p===pref));
   applyTheme();
+  if(document.getElementById("tab-performance")?.classList.contains("active")) renderPerformanceChart();
 }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if(themePref==='system') applyTheme();
@@ -1864,10 +1865,16 @@ function renderPerformanceChart(){
   document.getElementById("perf-latest-value").textContent = fmtTwd(last.value);
   document.getElementById("perf-latest-value").style.color = "var(--text-1)";
 
-  // Chart.js
-  const isDark = document.documentElement.getAttribute("data-theme") !== "light";
-  const gridColor  = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
-  const textColor  = isDark ? "#8b949e" : "#6e7681";
+  // Chart.js — 從 CSS variables 讀取實際顏色，確保跟隨 dark/light 主題
+  const cs = getComputedStyle(document.body);
+  const isDark = document.body.getAttribute("data-theme") !== "light";
+  const gridColor   = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const textColor   = cs.getPropertyValue("--text-3").trim() || (isDark ? "#8b949e" : "#6e7681");
+  const tooltipBg   = cs.getPropertyValue("--bg-elev-2").trim() || (isDark ? "#1c2128" : "#ffffff");
+  const tooltipBdr  = cs.getPropertyValue("--border-strong").trim() || (isDark ? "#30363d" : "#d0d7de");
+  const accentColor = cs.getPropertyValue("--accent").trim() || "#8a63d2";
+  const costLineColor = isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)";
+  const fillColor   = isDark ? "rgba(138,99,210,0.08)" : "rgba(138,99,210,0.05)";
 
   if(perfChartInstance) perfChartInstance.destroy();
   const ctx = document.getElementById("perfChart").getContext("2d");
@@ -1879,18 +1886,18 @@ function renderPerformanceChart(){
         {
           label: "總市值 (TWD)",
           data: valueData,
-          borderColor: "var(--accent)",
-          backgroundColor: isDark ? "rgba(138,99,210,0.08)" : "rgba(138,99,210,0.06)",
+          borderColor: accentColor,
+          backgroundColor: fillColor,
           fill: true,
           tension: 0.3,
-          pointRadius: points.length > 60 ? 0 : 3,
-          pointHoverRadius: 5,
+          pointRadius: points.length > 60 ? 0 : (points.length === 1 ? 5 : 3),
+          pointHoverRadius: 6,
           borderWidth: 2,
         },
         {
           label: "投入成本 (TWD)",
           data: costData,
-          borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)",
+          borderColor: costLineColor,
           borderDash: [4,4],
           fill: false,
           tension: 0,
@@ -1906,11 +1913,11 @@ function renderPerformanceChart(){
       plugins: {
         legend: { labels: { color: textColor, font: { family: "DM Mono", size: 11 }, boxWidth: 20 } },
         tooltip: {
-          backgroundColor: isDark ? "#1c2128" : "#ffffff",
-          borderColor: isDark ? "#30363d" : "#d0d7de",
+          backgroundColor: tooltipBg,
+          borderColor: tooltipBdr,
           borderWidth: 1,
           titleColor: textColor,
-          bodyColor: "var(--text-1)",
+          bodyColor: cs.getPropertyValue("--text-1").trim() || (isDark ? "#e6edf3" : "#1f2328"),
           callbacks: {
             label: ctx => ` ${ctx.dataset.label}：NT$ ${ctx.parsed.y.toLocaleString()}`
           }
@@ -1932,6 +1939,16 @@ function renderPerformanceChart(){
       }
     }
   });
+
+  // 只有一筆資料時加說明
+  const noteId = "perf-single-note";
+  let note = document.getElementById(noteId);
+  if(points.length === 1){
+    if(!note){ note = document.createElement("div"); note.id = noteId; note.style.cssText = "font-size:11px;color:var(--text-4);text-align:center;margin-top:8px"; document.querySelector(".chart-wrap").after(note); }
+    note.textContent = "目前只有 1 筆快照，再次更新行情後即可顯示走勢。";
+  } else {
+    if(note) note.textContent = "";
+  }
 }
 
 // ══════════════════════════════════════════════════════
