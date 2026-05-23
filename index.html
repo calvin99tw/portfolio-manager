@@ -1178,6 +1178,7 @@ async function confirmUpdatePrice(){
     console.warn("confirmUpdatePrice 失敗：",e);
     showToast("儲存失敗，請確認網路連線",true); return;
   }
+  failedAutoFetch.delete(priceTargetTicker);
   closePriceModal(); render(); showToast("現價已更新");
 }
 function toolbarEdit(){
@@ -1661,7 +1662,7 @@ function renderTable(){
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
       <td class="t-muted">${fmtPrice(g.ac,g.currency)}</td>
-      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-accent':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:12px" title="自動抓價失敗，請手動更新現價">⚠</span>`:""}</td>
+      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-accent':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:12px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${g.ticker}',${g.currentPrice})">⚠</span>`:""}</td>
       <td class="t-muted">${fmtCur(g.tc,g.currency)}</td>
       <td>${fmtCur(g.tv,g.currency)}</td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
