@@ -7,6 +7,7 @@
 <title>投資組合管理</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 /* ════════════════════════════════════════════════════
    THEME TOKENS  (Dark default; Light overrides below)
@@ -303,6 +304,16 @@ tr.history-row:hover td { background: var(--bg-elev-2); }
 .th-sub { font-size: 10px; font-weight: 400; color: var(--text-4); margin-top: 2px; }
 .cell-sub { font-size: 11px; color: var(--text-4); margin-top: 2px; }
 .cell-sub-colored { font-size: 11px; margin-top: 2px; }
+.perf-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.perf-periods { display: flex; gap: 4px; }
+.perf-period { padding: 4px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-3); font-family: 'DM Mono', monospace; transition: all 0.15s; }
+.perf-period.active { background: var(--bg-elev-3); color: var(--text-1); border-color: var(--border-strong); }
+.perf-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+.perf-stat { display: flex; flex-direction: column; gap: 2px; }
+.perf-stat-label { font-size: 11px; color: var(--text-4); }
+.perf-stat-value { font-size: 16px; font-weight: 500; }
+.chart-wrap { position: relative; height: 300px; }
+.perf-empty { text-align: center; color: var(--text-4); padding: 60px 0; font-size: 13px; }
 .t-mute2 { color: var(--text-4); }
 .fw-500 { font-weight: 500; }
 
@@ -394,6 +405,7 @@ h1, .heading { color: var(--text-1); }
       <button class="tab active" onclick="switchTab('holdings')">📊 持倉中</button>
       <button class="tab" onclick="switchTab('history')">📋 交易歷史</button>
       <button class="tab" onclick="switchTab('dividends')">💰 股息歷史</button>
+      <button class="tab" onclick="switchTab('performance')">📈 績效</button>
       <button class="tab" onclick="switchTab('settings')">⚙️ 設定</button>
     </div>
   </div>
@@ -559,6 +571,39 @@ h1, .heading { color: var(--text-1); }
         <div><span style="color:var(--text-2)">真實總報酬率</span> = 真實總報酬 / 累計投入成本（目前持倉成本 + 已賣出股票的買入成本）</div>
         <div style="margin-top:6px;color:var(--text-4)">※ 持倉表格皆以原幣別呈現；合併檢視才換算為 TWD；年化報酬需持有滿 365 天後才顯示</div>
         <div style="margin-top:4px;color:var(--text-4)">※ 顏色語意：<span class="t-pos">紅色 = 正/漲/獲利</span>，<span class="t-neg">綠色 = 負/跌/虧損</span>（亞洲市場慣例）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-performance">
+    <div class="card" style="padding:24px">
+      <div class="perf-header">
+        <div class="perf-stats">
+          <div class="perf-stat">
+            <span class="perf-stat-label">區間報酬</span>
+            <span class="perf-stat-value" id="perf-return-pct">—</span>
+          </div>
+          <div class="perf-stat">
+            <span class="perf-stat-label">區間損益</span>
+            <span class="perf-stat-value" id="perf-return-abs">—</span>
+          </div>
+          <div class="perf-stat">
+            <span class="perf-stat-label">最新市值</span>
+            <span class="perf-stat-value" id="perf-latest-value">—</span>
+          </div>
+        </div>
+        <div class="perf-periods">
+          <button class="perf-period" onclick="setPerfPeriod('1M')">1M</button>
+          <button class="perf-period" onclick="setPerfPeriod('3M')">3M</button>
+          <button class="perf-period" onclick="setPerfPeriod('6M')">6M</button>
+          <button class="perf-period active" onclick="setPerfPeriod('YTD')">YTD</button>
+          <button class="perf-period" onclick="setPerfPeriod('1Y')">1Y</button>
+          <button class="perf-period" onclick="setPerfPeriod('ALL')">ALL</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="perfChart"></canvas>
+        <div class="perf-empty" id="perfEmpty" style="display:none">尚無歷史資料。每次更新行情後會自動記錄一筆快照，累積後即可顯示走勢圖。</div>
       </div>
     </div>
   </div>
@@ -840,6 +885,49 @@ function loadCacheFromStorage() {
   } catch(e) { return null; }
 }
 
+async function loadSnapshots() {
+  const uid = currentUser?.id;
+  if(!uid) return;
+  try {
+    const { data, error } = await sb.from('snapshots')
+      .select('date,twd_value,usd_value,twd_cost,usd_cost,usd_rate')
+      .eq('user_id', uid)
+      .order('date', { ascending: true });
+    if(error) throw error;
+    snapshots = data || [];
+  } catch(e) {
+    console.warn("snapshots 載入失敗：", e);
+  }
+}
+
+async function saveSnapshot() {
+  const uid = currentUser?.id;
+  if(!uid) return;
+  const usdRate = parseFloat(document.getElementById("usdRate")?.value) || 0;
+  if(!usdRate) return;
+  const gs = groups();
+  const twdGs = gs.filter(g => g.currency === "TWD");
+  const usdGs = gs.filter(g => g.currency === "USD");
+  const twd_value = twdGs.reduce((a,g) => a + g.tv, 0);
+  const usd_value = usdGs.reduce((a,g) => a + g.tv, 0);
+  const twd_cost  = twdGs.reduce((a,g) => a + g.tc, 0);
+  const usd_cost  = usdGs.reduce((a,g) => a + g.tc, 0);
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const { error } = await sb.from('snapshots').upsert(
+      { user_id: uid, date: today, twd_value, usd_value, twd_cost, usd_cost, usd_rate: usdRate },
+      { onConflict: 'user_id,date' }
+    );
+    if(error) throw error;
+    // 更新本地快照陣列
+    const idx = snapshots.findIndex(s => s.date === today);
+    const entry = { date: today, twd_value, usd_value, twd_cost, usd_cost, usd_rate: usdRate };
+    if(idx >= 0) snapshots[idx] = entry; else snapshots.push(entry);
+  } catch(e) {
+    console.warn("snapshot 儲存失敗：", e);
+  }
+}
+
 function saveToLocalCache() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -1009,7 +1097,9 @@ async function clearAllData() {
   }
 }
 
-let buys = [], sells = [], dividends = [];
+let buys = [], sells = [], dividends = [], snapshots = [];
+let perfPeriod = "YTD";
+let perfChartInstance = null;
 let viewMode = 'split';
 let sel = null;
 let expanded = new Set();
@@ -1389,6 +1479,7 @@ async function fetchMarketData(manual = false) {
   const now = new Date();
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
   if(stockSuccess || usdStockSuccess || rateSuccess) {
+    saveSnapshot();
     const dateLabel = stockDate ? `收盤 ${stockDate} · ` : "";
     updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
     if(manual) {
@@ -1706,6 +1797,144 @@ function renderTable(){
 }
 
 // ══════════════════════════════════════════════════════
+// PERFORMANCE CHART
+// ══════════════════════════════════════════════════════
+function setPerfPeriod(p){
+  perfPeriod = p;
+  document.querySelectorAll(".perf-period").forEach(btn => btn.classList.toggle("active", btn.textContent === p));
+  renderPerformanceChart();
+}
+
+function renderPerformanceChart(){
+  if(!snapshots.length){
+    document.getElementById("perfChart").style.display = "none";
+    document.getElementById("perfEmpty").style.display = "block";
+    // clear stats
+    ["perf-return-pct","perf-return-abs","perf-latest-value"].forEach(id => document.getElementById(id).textContent = "—");
+    return;
+  }
+  document.getElementById("perfChart").style.display = "block";
+  document.getElementById("perfEmpty").style.display = "none";
+
+  // filter by period
+  const now = new Date();
+  let cutoff = null;
+  if(perfPeriod === "1M") { cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth()-1); }
+  else if(perfPeriod === "3M") { cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth()-3); }
+  else if(perfPeriod === "6M") { cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth()-6); }
+  else if(perfPeriod === "YTD") { cutoff = new Date(now.getFullYear(), 0, 1); }
+  else if(perfPeriod === "1Y") { cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear()-1); }
+
+  const filtered = cutoff
+    ? snapshots.filter(s => new Date(s.date) >= cutoff)
+    : snapshots;
+
+  if(!filtered.length){
+    document.getElementById("perfChart").style.display = "none";
+    document.getElementById("perfEmpty").style.display = "block";
+    document.getElementById("perfEmpty").textContent = `所選期間（${perfPeriod}）尚無資料，請切換至更長的時間範圍。`;
+    ["perf-return-pct","perf-return-abs","perf-latest-value"].forEach(id => document.getElementById(id).textContent = "—");
+    return;
+  }
+
+  // compute TWD total value & cost per snapshot
+  const toTwd = s => {
+    const rate = s.usd_rate || 1;
+    return {
+      value: (s.twd_value||0) + (s.usd_value||0) * rate,
+      cost:  (s.twd_cost||0)  + (s.usd_cost||0)  * rate,
+    };
+  };
+  const points = filtered.map(s => ({ date: s.date, ...toTwd(s) }));
+
+  const labels = points.map(p => p.date);
+  const valueData = points.map(p => Math.round(p.value));
+  const costData  = points.map(p => Math.round(p.cost));
+
+  // stats for the period
+  const first = points[0], last = points[points.length-1];
+  const diff = last.value - first.value;
+  const pct  = first.value > 0 ? diff / first.value * 100 : 0;
+  const fmtTwd = v => `NT$ ${Math.round(v).toLocaleString()}`;
+
+  document.getElementById("perf-return-pct").textContent  = (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
+  document.getElementById("perf-return-pct").style.color  = pct >= 0 ? "var(--pos)" : "var(--neg)";
+  document.getElementById("perf-return-abs").textContent  = (diff >= 0 ? "+" : "") + fmtTwd(diff);
+  document.getElementById("perf-return-abs").style.color  = diff >= 0 ? "var(--pos)" : "var(--neg)";
+  document.getElementById("perf-latest-value").textContent = fmtTwd(last.value);
+  document.getElementById("perf-latest-value").style.color = "var(--text-1)";
+
+  // Chart.js
+  const isDark = document.documentElement.getAttribute("data-theme") !== "light";
+  const gridColor  = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const textColor  = isDark ? "#8b949e" : "#6e7681";
+
+  if(perfChartInstance) perfChartInstance.destroy();
+  const ctx = document.getElementById("perfChart").getContext("2d");
+  perfChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "總市值 (TWD)",
+          data: valueData,
+          borderColor: "var(--accent)",
+          backgroundColor: isDark ? "rgba(138,99,210,0.08)" : "rgba(138,99,210,0.06)",
+          fill: true,
+          tension: 0.3,
+          pointRadius: points.length > 60 ? 0 : 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: "投入成本 (TWD)",
+          data: costData,
+          borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)",
+          borderDash: [4,4],
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          borderWidth: 1.5,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: textColor, font: { family: "DM Mono", size: 11 }, boxWidth: 20 } },
+        tooltip: {
+          backgroundColor: isDark ? "#1c2128" : "#ffffff",
+          borderColor: isDark ? "#30363d" : "#d0d7de",
+          borderWidth: 1,
+          titleColor: textColor,
+          bodyColor: "var(--text-1)",
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}：NT$ ${ctx.parsed.y.toLocaleString()}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor, font: { family: "DM Mono", size: 10 }, maxTicksLimit: 8 },
+          grid: { color: gridColor }
+        },
+        y: {
+          ticks: {
+            color: textColor,
+            font: { family: "DM Mono", size: 10 },
+            callback: v => "NT$ " + (v >= 1000000 ? (v/1000000).toFixed(1)+"M" : v >= 1000 ? (v/1000).toFixed(0)+"K" : v)
+          },
+          grid: { color: gridColor }
+        }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
 // MODALS
 // ══════════════════════════════════════════════════════
 function openBuyModal(id, mode, prefill){
@@ -2009,10 +2238,11 @@ async function deleteDividend(id){
 }
 
 function switchTab(name){
-  const tabs = ["holdings","history","dividends","settings"];
+  const tabs = ["holdings","history","dividends","performance","settings"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",tabs[i]===name));
   document.querySelectorAll(".tab-content").forEach(tc=>tc.classList.remove("active"));
   document.getElementById("tab-"+name).classList.add("active");
+  if(name === "performance") renderPerformanceChart();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2141,6 +2371,7 @@ async function initPortfolioApp() {
 
   // Step 3: 從 Supabase 拉最新資料（覆蓋快取）
   await loadFromSupabase();
+  await loadSnapshots();
 
   // Step 4: 最終 render
   syncToolbar();
