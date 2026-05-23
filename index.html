@@ -300,6 +300,9 @@ tr.history-row:hover td { background: var(--bg-elev-2); }
 .t-neg-dim { color: var(--neg-dim); }
 .t-muted { color: var(--text-3); }
 .t-accent { color: var(--accent); }
+.th-sub { font-size: 10px; font-weight: 400; color: var(--text-4); margin-top: 2px; }
+.cell-sub { font-size: 11px; color: var(--text-4); margin-top: 2px; }
+.cell-sub-colored { font-size: 11px; margin-top: 2px; }
 .t-mute2 { color: var(--text-4); }
 .fw-500 { font-weight: 500; }
 
@@ -425,10 +428,13 @@ h1, .heading { color: var(--text-1); }
         <table>
           <thead><tr>
             <th style="text-align:left;padding-left:20px">標的</th>
-            <th>幣別</th><th>股數</th><th>均攤成本</th><th>現價</th>
-            <th>總成本</th><th>市值</th><th>未實現損益</th>
-            <th>報酬率</th><th>已收股息</th><th>總報酬</th><th>年化報酬</th>
-            <th>佔池比</th><th>狀態</th>
+            <th>幣別</th><th>股數</th>
+            <th>均攤成本<div class="th-sub">總成本</div></th>
+            <th>現價<div class="th-sub">市值</div></th>
+            <th>未實現損益</th><th>報酬率</th>
+            <th>已收股息<div class="th-sub">總報酬</div></th>
+            <th>年化報酬<div class="th-sub">佔池比</div></th>
+            <th>狀態</th>
           </tr></thead>
           <tbody id="holdingsBody"></tbody>
         </table>
@@ -1661,16 +1667,12 @@ function renderTable(){
       <td><i class="chevron${isOpen?' open':''}" onclick="toggleExpand('${g.ticker}',event)">▶</i><span class="fw-500">${g.name}</span><div style="font-size:11px;color:var(--text-4);margin-left:22px">${g.ticker} · ${g.batches.length}批</div></td>
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
-      <td class="t-muted">${fmtPrice(g.ac,g.currency)}</td>
-      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-accent':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:12px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${g.ticker}',${g.currentPrice})">⚠</span>`:""}</td>
-      <td class="t-muted">${fmtCur(g.tc,g.currency)}</td>
-      <td>${fmtCur(g.tv,g.currency)}</td>
+      <td class="t-muted">${fmtPrice(g.ac,g.currency)}<div class="cell-sub">${fmtCur(g.tc,g.currency)}</div></td>
+      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-accent':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:12px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${g.ticker}',${g.currentPrice})">⚠</span>`:""}<div class="cell-sub">${fmtCur(g.tv,g.currency)}</div></td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
       <td><span class="${pnlClass(g.pct)} fw-500">${fmtPct(g.pct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${mw}%;background:${si.color}"></div></div></td>
-      <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}</td>
-      <td class="${pnlClass(g.ret)} fw-500">${fmtCur(g.ret,g.currency)}</td>
-      <td>${fmtAnnualized(g.ann, Math.round(g.wd))}</td>
-      <td><span class="t-muted">${g.ap.toFixed(1)}%</span><div class="meter-bar"><div class="meter-fill" style="width:${aw}%"></div></div></td>
+      <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}<div class="${pnlClass(g.ret)} fw-500 cell-sub-colored">${fmtCur(g.ret,g.currency)}</div></td>
+      <td>${fmtAnnualized(g.ann, Math.round(g.wd))}<div class="cell-sub">${g.ap.toFixed(1)}%<div class="meter-bar" style="margin-top:2px"><div class="meter-fill" style="width:${aw}%"></div></div></div></td>
       <td><span class="tag-status" style="background:${si.bg};color:${si.color};border:1px solid ${si.border};padding:2px 10px;border-radius:99px;font-size:11px">${si.label}</span></td>
     </tr>`;
     if(isOpen) g.batches.forEach(b=>{
@@ -1690,20 +1692,17 @@ function renderTable(){
         <td class="t-muted" style="font-size:12px">└ 批次 ${b.buyDate}${feeNote}</td>
         <td></td>
         <td class="t-muted" style="font-size:12px">${fmtShares(b.shares,g.currency)}</td>
-        <td class="t-mute2" style="font-size:12px">${fmtPrice(b.costPerShare,g.currency)}</td>
-        <td class="t-muted" style="font-size:12px">${fmtPrice(b.currentPrice,g.currency)}</td>
-        <td class="t-mute2" style="font-size:12px">${fmtCur(bc,g.currency)}</td>
-        <td class="t-muted" style="font-size:12px">${fmtCur(bv,g.currency)}</td>
+        <td class="t-mute2" style="font-size:12px">${fmtPrice(b.costPerShare,g.currency)}<div class="cell-sub">${fmtCur(bc,g.currency)}</div></td>
+        <td class="t-muted" style="font-size:12px">${fmtPrice(b.currentPrice,g.currency)}<div class="cell-sub">${fmtCur(bv,g.currency)}</div></td>
         <td class="${pnlClass(bp)}" style="font-size:12px">${fmtCur(bp,g.currency)}</td>
         <td style="font-size:12px"><span class="${pnlClass(bpct)}">${fmtPct(bpct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${Math.min(Math.abs(bpct),50)*2}%;background:${bsi.color}"></div></div></td>
-        <td class="${bd!==0?pnlClass(bd):'t-muted'}" style="font-size:12px">${fmtCur(bd,g.currency)}</td>
-        <td class="${pnlClass(br)}" style="font-size:12px">${fmtCur(br,g.currency)}</td>
+        <td class="${bd!==0?pnlClass(bd):'t-muted'}" style="font-size:12px">${fmtCur(bd,g.currency)}<div class="${pnlClass(br)} cell-sub-colored">${fmtCur(br,g.currency)}</div></td>
         <td style="font-size:12px">${fmtAnnualized(ba, bdays)}</td>
-        <td></td><td></td>
+        <td></td>
       </tr>`;
     });
   });
-  document.getElementById("holdingsBody").innerHTML=rows||`<tr><td colspan="14" class="empty-state">尚無持倉資料，點擊「＋ 新增買入」開始記錄</td></tr>`;
+  document.getElementById("holdingsBody").innerHTML=rows||`<tr><td colspan="10" class="empty-state">尚無持倉資料，點擊「＋ 新增買入」開始記錄</td></tr>`;
 }
 
 // ══════════════════════════════════════════════════════
