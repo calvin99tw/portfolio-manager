@@ -20,7 +20,7 @@
 |------|----|----|
 | 儲存 | localStorage + CSV | Supabase（PostgreSQL） |
 | 托管 | 本機 file:// | GitHub Pages（HTTPS） |
-| 股價 | 手動輸入 | TWSE OpenAPI（台股，T5 完成）+ Yahoo Finance（美股，T6 待執行） |
+| 股價 | 手動輸入 | TWSE OpenAPI（台股）+ Yahoo Finance v8（美股） |
 | 匯率 | fawazahmed0（手動觸發） | CBC 中央銀行（自動抓取，T5 完成） |
 | 登入 | 無 | Supabase Email Magic Link |
 
@@ -60,7 +60,7 @@ dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmo
 | T3 | App 加入登入功能 | ✅ 完成 | index.html 建立，OTP 驗證碼登入，session 預設一週，資料層暫時還是 localStorage |
 | T4 | 資料層換成 Supabase | ✅ 完成 | localStorage → Supabase，localStorage 降級為快取，離線同步，詳見 docs/T4-summary.md |
 | T5 | 台股股價自動抓取 | ✅ 完成 | TWSE + CBC，Cloudflare Worker proxy，詳見 docs/T5-summary.md |
-| T6 | 美股股價自動抓取 | ⏳ 待執行 | Yahoo Finance，可共用現有 Cloudflare Worker |
+| T6 | 美股股價自動抓取 | ✅ 完成 | Yahoo Finance v8，共用 Cloudflare Worker，詳見 docs/T6-summary.md |
 | T7 | 資料移轉 + 正式切換 | ⏳ 待執行 | CSV 匯入 Supabase，取代現有版本 |
 
 **Cloudflare Worker**：`https://raspy-cherry-f806.calvin99-tw.workers.dev`（已部署，代理 TWSE / CBC / TAIFEX）
