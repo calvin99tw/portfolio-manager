@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# Claude Code 對話紀錄
+.claude/
+
 # 個人財務資料（不推上 GitHub）
 portfolio.csv
 *.csv
