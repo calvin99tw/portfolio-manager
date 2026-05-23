@@ -1660,7 +1660,7 @@ function renderTable(){
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
       <td class="t-muted">${fmtPrice(g.ac,g.currency)}</td>
-      <td class="fw-500">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="color:var(--text-3);font-size:10px" title="自動抓價失敗，請手動更新現價">⚠</span>`:""}</td>
+      <td class="fw-500">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="color:#f59e0b;font-size:13px;cursor:help" title="自動抓價失敗，請手動更新現價">⚠</span>`:""}</td>
       <td class="t-muted">${fmtCur(g.tc,g.currency)}</td>
       <td>${fmtCur(g.tv,g.currency)}</td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
