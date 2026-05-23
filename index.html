@@ -1009,6 +1009,7 @@ let expanded = new Set();
 let editBuyId = null, sellTargetId = null, priceTargetTicker = null, divTargetTicker = null;
 let editSellId = null;
 let editDividendId = null;
+let failedAutoFetch = new Set(); // 自動抓價失敗的 ticker
 let _appInited = false;
 
 // ══════════════════════════════════════════════════════
@@ -1243,6 +1244,7 @@ async function fetchMarketData(manual = false) {
   let rateSuccess = false;
   let stockDate = "";  // 收盤價日期，格式 MM/DD
   const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
+  const newFailed = new Set(); // 本次抓取失敗的 ticker
 
   // ── 1. 台股收盤價（優先用官網盤後資料，fallback 用 OpenAPI）──
   try {
@@ -1288,7 +1290,7 @@ async function fetchMarketData(manual = false) {
     const uid = currentUser?.id;
     for(const ticker of twdTickers) {
       const newPrice = priceMap[ticker];
-      if(newPrice === undefined) continue;
+      if(newPrice === undefined) { newFailed.add(ticker); continue; }
       buys.forEach(b => { if(b.ticker === ticker && b.currency === "TWD") b.currentPrice = newPrice; });
       if(uid) {
         try {
@@ -1319,6 +1321,7 @@ async function fetchMarketData(manual = false) {
         } catch(e) { return null; }
       }));
       let anySuccess = false;
+      usdTickers.forEach((ticker, i) => { if(!results[i]) newFailed.add(ticker); });
       for(const r of results) {
         if(!r) continue;
         buys.forEach(b => { if(b.ticker === r.ticker && b.currency === "USD") b.currentPrice = r.price; });
@@ -1373,13 +1376,20 @@ async function fetchMarketData(manual = false) {
   else saveToLocalCache();
 
   // ── 4. render + 更新狀態 ──
+  failedAutoFetch = newFailed;
   render();
   const now = new Date();
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
   if(stockSuccess || usdStockSuccess || rateSuccess) {
     const dateLabel = stockDate ? `收盤 ${stockDate} · ` : "";
     updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
-    if(manual) showToast("行情已更新 ✓");
+    if(manual) {
+      if(newFailed.size > 0) {
+        showToast(`行情已更新 ✓　無法自動更新：${[...newFailed].join("、")}`, true);
+      } else {
+        showToast("行情已更新 ✓");
+      }
+    }
   } else {
     updateMarketStatus("行情更新失敗", "var(--pos)");
     if(manual) showToast("行情抓取失敗，請稍後再試", true);
@@ -1650,7 +1660,7 @@ function renderTable(){
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
       <td class="t-muted">${fmtPrice(g.ac,g.currency)}</td>
-      <td class="fw-500">${fmtPrice(g.currentPrice,g.currency)}</td>
+      <td class="fw-500">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="color:var(--text-3);font-size:10px" title="自動抓價失敗，請手動更新現價">⚠</span>`:""}</td>
       <td class="t-muted">${fmtCur(g.tc,g.currency)}</td>
       <td>${fmtCur(g.tv,g.currency)}</td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
