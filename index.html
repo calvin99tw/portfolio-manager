@@ -433,7 +433,7 @@ h1, .heading { color: var(--text-1); }
             <th>現價<div class="th-sub">市值</div></th>
             <th>未實現損益</th><th>報酬率</th>
             <th>已收股息<div class="th-sub">總報酬</div></th>
-            <th>年化報酬<div class="th-sub">佔池比</div></th>
+            <th>佔池比<div class="th-sub">年化報酬</div></th>
             <th>狀態</th>
           </tr></thead>
           <tbody id="holdingsBody"></tbody>
@@ -1672,7 +1672,7 @@ function renderTable(){
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
       <td><span class="${pnlClass(g.pct)} fw-500">${fmtPct(g.pct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${mw}%;background:${si.color}"></div></div></td>
       <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}<div class="${pnlClass(g.ret)} fw-500 cell-sub-colored">${fmtCur(g.ret,g.currency)}</div></td>
-      <td>${fmtAnnualized(g.ann, Math.round(g.wd))}<div class="cell-sub">${g.ap.toFixed(1)}%<div class="meter-bar" style="margin-top:2px"><div class="meter-fill" style="width:${aw}%"></div></div></div></td>
+      <td><span class="t-muted">${g.ap.toFixed(1)}%</span><div class="meter-bar" style="margin-top:2px"><div class="meter-fill" style="width:${aw}%"></div></div><div class="cell-sub">${fmtAnnualized(g.ann, Math.round(g.wd))}</div></td>
       <td><span class="tag-status" style="background:${si.bg};color:${si.color};border:1px solid ${si.border};padding:2px 10px;border-radius:99px;font-size:11px">${si.label}</span></td>
     </tr>`;
     if(isOpen) g.batches.forEach(b=>{
