@@ -1686,7 +1686,7 @@ function renderTable(){
       const bsi=statusInfo(bpct);
       const bsel=sel?.type==='batch'&&sel.batchId===b.id;
       const feeNote = bFee>0 ? ` (含手續費 ${fmtMoney(bFee,g.currency)})` : '';
-      rows+=`<tr class="batch-row${bsel?' selected':''}" onclick="pickBatch(${b.id},'${g.ticker}',event)">
+      rows+=`<tr class="batch-row${bsel?' selected':''}" onclick="pickBatch('${b.id}','${g.ticker}',event)">
         <td class="t-muted" style="font-size:12px">└ 批次 ${b.buyDate}${feeNote}</td>
         <td></td>
         <td class="t-muted" style="font-size:12px">${fmtShares(b.shares,g.currency)}</td>
