@@ -1239,6 +1239,7 @@ async function fetchMarketData(manual = false) {
   updateMarketStatus("行情更新中…", "var(--text-3)");
 
   let stockSuccess = false;
+  let usdStockSuccess = false;
   let rateSuccess = false;
   let stockDate = "";  // 收盤價日期，格式 MM/DD
   const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
@@ -1300,6 +1301,40 @@ async function fetchMarketData(manual = false) {
     console.warn("台股股價抓取失敗：", e);
   }
 
+  // ── 1.5 美股收盤價（Yahoo Finance v8，每個 ticker 獨立查詢，並行）──
+  try {
+    const usdTickers = [...new Set(buys.filter(b => b.currency === "USD").map(b => b.ticker))];
+    if(usdTickers.length === 0) {
+      usdStockSuccess = true;
+    } else {
+      const uid = currentUser?.id;
+      const results = await Promise.all(usdTickers.map(async ticker => {
+        try {
+          const res = await fetch(`${TWSE_PROXY}/yahoo/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+          if(!res.ok) return null;
+          const data = await res.json();
+          const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+          if(typeof price !== "number" || price <= 0) return null;
+          return { ticker, price };
+        } catch(e) { return null; }
+      }));
+      let anySuccess = false;
+      for(const r of results) {
+        if(!r) continue;
+        buys.forEach(b => { if(b.ticker === r.ticker && b.currency === "USD") b.currentPrice = r.price; });
+        if(uid) {
+          try {
+            await sb.from('buys').update({ currentPrice: r.price }).eq('ticker', r.ticker).eq('user_id', uid);
+          } catch(e) { console.warn(`buys 更新現價失敗 (${r.ticker}):`, e); }
+        }
+        anySuccess = true;
+      }
+      if(anySuccess) usdStockSuccess = true;
+    }
+  } catch(e) {
+    console.warn("美股股價抓取失敗：", e);
+  }
+
   // ── 2. USD/TWD 匯率（CBC 中央銀行為主，fawazahmed0 為備援）──
   try {
     const res = await fetch(`${TWSE_PROXY}/cbc/api/OpenData/FTDOpenData_Day`);
@@ -1341,7 +1376,7 @@ async function fetchMarketData(manual = false) {
   render();
   const now = new Date();
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
-  if(stockSuccess || rateSuccess) {
+  if(stockSuccess || usdStockSuccess || rateSuccess) {
     const dateLabel = stockDate ? `收盤 ${stockDate} · ` : "";
     updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
     if(manual) showToast("行情已更新 ✓");
