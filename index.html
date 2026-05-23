@@ -568,7 +568,7 @@ h1, .heading { color: var(--text-1); }
     <div><label class="form-label">股數 *</label><input id="b-shares" type="number" step="any" placeholder="100"></div>
     <div><label class="form-label">買入價格 *</label><input id="b-cost" type="number" step="0.01" placeholder="820"></div>
     <div><label class="form-label">手續費</label><input id="b-fee" type="number" step="0.01" placeholder="0"></div>
-    <div id="b-price-wrap"><label class="form-label" id="b-price-label">目前現價</label><input id="b-price" type="number" step="0.01" placeholder="同買入價"><div id="b-price-hint" style="font-size:10px;color:var(--text-4);margin-top:4px;line-height:1.5"></div></div>
+    <div id="b-price-wrap" style="display:none"><input id="b-price" type="number" step="0.01"></div>
     <div><label class="form-label">買入日期 *</label><input id="b-date" type="date"></div>
   </div>
   <div class="form-actions">
@@ -1701,12 +1701,7 @@ function openBuyModal(id, mode, prefill){
   editBuyId=id;
   const t=document.getElementById("buyModalTitle");
   const s=document.getElementById("buyModalSub");
-  const priceWrap=document.getElementById("b-price-wrap");
-  const priceHint=document.getElementById("b-price-hint");
-  const priceLabel=document.getElementById("b-price-label");
   const costInput=document.getElementById("b-cost");
-  const priceInput=document.getElementById("b-price");
-  costInput.oninput=null; priceInput.oninput=null; priceInput.dataset.manualEdit="";
 
   if(mode==='edit'&&id){
     const b=buys.find(x=>x.id===id); if(!b) return;
@@ -1717,11 +1712,7 @@ function openBuyModal(id, mode, prefill){
     document.getElementById("b-shares").value=b.shares;
     costInput.value=b.costPerShare;
     document.getElementById("b-fee").value=b.buyFee||0;
-    priceInput.value=b.currentPrice;
     document.getElementById("b-date").value=b.buyDate;
-    priceWrap.style.display="";
-    priceLabel.textContent="目前現價";
-    priceHint.textContent="修改買入價不會自動更新現價";
   } else if(mode==='addmore'&&prefill){
     t.textContent=`加碼買入：${prefill.name}`; s.textContent=`代號 ${prefill.ticker}，幣別 ${prefill.currency} · 目前現價 ${prefill.currentPrice}`;
     document.getElementById("b-name").value=prefill.name;
@@ -1730,25 +1721,14 @@ function openBuyModal(id, mode, prefill){
     document.getElementById("b-shares").value="";
     costInput.value=prefill.currentPrice;
     document.getElementById("b-fee").value="0";
-    priceInput.value=prefill.currentPrice;
     document.getElementById("b-date").value=new Date().toISOString().slice(0,10);
-    priceWrap.style.display="none";
   } else {
     t.textContent="新增買入紀錄"; s.textContent="";
     ["b-name","b-ticker","b-shares"].forEach(i=>document.getElementById(i).value="");
-    costInput.value=""; priceInput.value="";
+    costInput.value="";
     document.getElementById("b-fee").value="0";
     document.getElementById("b-currency").value="TWD";
     document.getElementById("b-date").value=new Date().toISOString().slice(0,10);
-    priceWrap.style.display="";
-    priceLabel.textContent="目前現價";
-    priceHint.textContent="預設同買入價，可事後從「更新現價」修改";
-    costInput.oninput=function(){
-      if(!priceInput.dataset.manualEdit) priceInput.value=this.value;
-    };
-    priceInput.oninput=function(){
-      this.dataset.manualEdit=(this.value!==costInput.value)?"1":"";
-    };
   }
   document.getElementById("buyModal").classList.add("open");
 }
@@ -1766,15 +1746,15 @@ async function saveBuy(){
   const shares=parseFloat(document.getElementById("b-shares").value);
   const costPerShare=parseFloat(document.getElementById("b-cost").value);
   const buyFee=parseFloat(document.getElementById("b-fee").value)||0;
-  const priceRaw=parseFloat(document.getElementById("b-price").value);
-  const currentPrice=isNaN(priceRaw) ? costPerShare : priceRaw;
   const buyDate=document.getElementById("b-date").value;
   if(!name||!ticker||isNaN(shares)||isNaN(costPerShare)||!buyDate){showToast("請填寫所有必填欄位",true);return;}
   const uid=currentUser?.id;
+  // 編輯時保留現有現價；新增時預設買入價，等自動抓取更新
+  const currentPrice=editBuyId ? (buys.find(x=>x.id===editBuyId)?.currentPrice ?? costPerShare) : costPerShare;
   const entry={id:editBuyId??crypto.randomUUID(),name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate,user_id:uid};
   try {
     if(editBuyId){
-      const { error } = await sb.from('buys').update({name,ticker,currency,shares,costPerShare,buyFee,currentPrice,buyDate}).eq('id',editBuyId).eq('user_id',uid);
+      const { error } = await sb.from('buys').update({name,ticker,currency,shares,costPerShare,buyFee,buyDate}).eq('id',editBuyId).eq('user_id',uid);
       if(error) throw error;
       buys=buys.map(x=>x.id===editBuyId?entry:x);
     } else {
@@ -1782,10 +1762,6 @@ async function saveBuy(){
       if(error) throw error;
       buys.push(entry);
     }
-    // 同步同一標的所有批次的現價
-    const { error: syncErr } = await sb.from('buys').update({currentPrice}).eq('ticker',ticker).eq('user_id',uid);
-    if(syncErr) throw syncErr;
-    buys=buys.map(b=>b.ticker===ticker?{...b,currentPrice}:b);
     saveToLocalCache(); updateStorageStatus(true);
   } catch(e) {
     console.warn("saveBuy 失敗：",e);
