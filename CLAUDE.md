@@ -39,6 +39,7 @@ pools      → id, poolTWD, poolUSD, usdRate
 buys       → id, name, ticker, currency, shares, costPerShare, buyFee, currentPrice, buyDate
 sells      → id, name, ticker, currency, shares, costPerShare, sellPrice, buyFee, sellFee, sellTax, buyDate, sellDate, holdDays, realizedPnL
 dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmount, exDate, note
+snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_rate（unique: user_id+date）
 ```
 
 ---
@@ -60,8 +61,9 @@ dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmo
 | T3 | App 加入登入功能 | ✅ 完成 | index.html 建立，OTP 驗證碼登入，session 預設一週，資料層暫時還是 localStorage |
 | T4 | 資料層換成 Supabase | ✅ 完成 | localStorage → Supabase，localStorage 降級為快取，離線同步，詳見 docs/T4-summary.md |
 | T5 | 台股股價自動抓取 | ✅ 完成 | TWSE + CBC，Cloudflare Worker proxy，詳見 docs/T5-summary.md |
-| T6 | 美股股價自動抓取 | ✅ 完成 | Yahoo Finance v8，共用 Cloudflare Worker，詳見 docs/T6-summary.md |
+| T6 | 美股股價自動抓取 | ✅ 完成 | Yahoo Finance v8，共用 Cloudflare Worker；含 ⚠ 失敗指示器、欄位合併、UUID onclick 修正，詳見 docs/T6-summary.md |
 | T7 | 資料移轉 + 正式切換 | ⏳ 待執行 | CSV 匯入 Supabase，取代現有版本 |
+| T8 | 績效歷史快照 + 折線圖 | ✅ 完成 | snapshots 資料表，每次更新行情自動記錄，Chart.js 折線圖 Tab，詳見 docs/T8-summary.md |
 
 **Cloudflare Worker**：`https://raspy-cherry-f806.calvin99-tw.workers.dev`（已部署，代理 TWSE / CBC / TAIFEX）
 
