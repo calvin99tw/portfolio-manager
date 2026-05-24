@@ -46,8 +46,12 @@ export default {
         targetUrl = "https://openapi.twse.com.tw" + url.pathname + url.search;
       }
 
+      const isCbc = url.pathname.startsWith('/cbc/');
       const res = await fetch(targetUrl, {
-        headers: { "User-Agent": "Mozilla/5.0" }
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          ...(isCbc ? { "Accept": "application/json" } : {}),
+        }
       });
       const body = await res.text();
       return new Response(body, {
