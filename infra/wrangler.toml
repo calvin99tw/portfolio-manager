@@ -1,0 +1,4 @@
+name = "raspy-cherry-f806"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+account_id = "acc0b7717def62d192258925640f6979"
