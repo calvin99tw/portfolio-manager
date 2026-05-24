@@ -67,6 +67,7 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 - 原始碼：`infra/worker.js`（版控於此 repo）
 - **Origin 白名單**：只允許 `https://calvin99tw.github.io` 與 `localhost`，其他 origin 回 403
 - CBC 路由加了 `Accept: application/json`，避免 CBC 偶發回傳 XML 導致解析失敗
+- **部署方式**：`cd infra && npm run deploy`（需先執行過 `npx wrangler login`，授權存於本機 keychain）
 
 ---
 
@@ -104,6 +105,8 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 
 - `index.html` — 正式版本（v4）
 - `infra/worker.js` — Cloudflare Worker 原始碼
+- `infra/wrangler.toml` — Wrangler 部署設定（Worker 名稱、Account ID）
+- `infra/package.json` — `npm run deploy` 觸發 wrangler deploy
 - `archive/投資組合管理.html` — v3.3.1 封存版，僅供參考
 - `README.md` — 使用者文件（功能說明、計算公式、CSV 格式）
 - `CLAUDE.md` — 本檔，Claude 開發指引
