@@ -9,8 +9,8 @@
 ## 專案概述
 
 個人投資組合管理工具，同時管理台股（TWD）與美股（USD）。
-目前版本：`投資組合管理.html`（v3.3.1，純 HTML + localStorage，持續可用）
-開發中版本：`index.html`（v4，Supabase + GitHub Pages）
+正式版本：`index.html`（v4，Supabase + GitHub Pages）
+封存版本：`archive/投資組合管理.html`（v3.3.1，純 HTML + localStorage）
 
 ---
 
@@ -23,8 +23,6 @@
 | 股價 | 手動輸入 | TWSE OpenAPI（台股）+ Yahoo Finance v8（美股） |
 | 匯率 | fawazahmed0（手動觸發） | CBC 中央銀行（自動抓取，T5 完成） |
 | 登入 | 無 | Supabase Email Magic Link |
-
-**平行開發原則**：`投資組合管理.html` 完全不動，`index.html` 為 v4 新檔，T7 完成後才正式取代。
 
 ---
 
@@ -62,10 +60,22 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 | T4 | 資料層換成 Supabase | ✅ 完成 | localStorage → Supabase，localStorage 降級為快取，離線同步，詳見 docs/T4-summary.md |
 | T5 | 台股股價自動抓取 | ✅ 完成 | TWSE + CBC，Cloudflare Worker proxy，詳見 docs/T5-summary.md |
 | T6 | 美股股價自動抓取 | ✅ 完成 | Yahoo Finance v8，共用 Cloudflare Worker；含 ⚠ 失敗指示器、欄位合併、UUID onclick 修正，詳見 docs/T6-summary.md |
-| T7 | 資料移轉 + 正式切換 | ⏳ 待執行 | CSV 匯入 Supabase，取代現有版本 |
+| T7 | 資料移轉 + 正式切換 | ✅ 完成 | v3 封存至 archive/，README 改寫為 v4，詳見 docs/T7-summary.md |
 | T8 | 績效歷史快照 + 折線圖 | ✅ 完成 | snapshots 資料表，每次更新行情自動記錄，Chart.js 折線圖 Tab，詳見 docs/T8-summary.md |
 
 **Cloudflare Worker**：`https://raspy-cherry-f806.calvin99-tw.workers.dev`（已部署，代理 TWSE / CBC / TAIFEX / Yahoo Finance）
+
+---
+
+## 未來開發方向
+
+| 優先度 | 功能 | 說明 |
+|--------|------|------|
+| 中 | 池間資金轉移 | 從台股池轉到美股池（含匯率），有歷史紀錄 |
+| 中 | 池總額變動歷史 | 記錄何時注資/提領 |
+| 中 | 目標配置與偏離警示 | 設定每個標的的目標佔比 |
+| 低 | 備注欄位 | 每筆買入可加投資理由 |
+| 低 | 稅後報酬計算 | 區分股息與資本利得稅率 |
 
 ---
 
@@ -80,7 +90,7 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 
 ## 重要檔案
 
-- `投資組合管理.html` — 目前正式版本（v3.3.1），不可修改
-- `index.html` — v4 開發中版本
+- `index.html` — 正式版本（v4）
+- `archive/投資組合管理.html` — v3.3.1 封存版，僅供參考
 - `README.md` — 使用者文件（功能說明、計算公式、CSV 格式）
 - `CLAUDE.md` — 本檔，Claude 開發指引
