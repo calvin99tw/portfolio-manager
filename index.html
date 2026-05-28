@@ -473,7 +473,7 @@ h1, .heading { color: var(--text-1); }
         <table>
           <thead><tr>
             <th style="text-align:left;padding-left:20px">標的</th>
-            <th>幣別</th><th>賣出股數</th><th>買入均價</th><th>賣出價</th>
+            <th>幣別</th><th>賣出股數</th><th>買入均價</th><th>賣出價<div class="th-sub">實領金額</div></th>
             <th>買入日</th><th>賣出日</th><th>持有天數</th>
             <th>實現損益</th><th>報酬率</th><th>年化報酬</th><th></th>
           </tr></thead>
@@ -1702,7 +1702,7 @@ function render(){
       <td style="padding-left:20px"><div class="fw-500">${s.name}</div><div style="font-size:11px;color:var(--text-4)">${s.ticker}</div></td>
       <td><span class="tag">${s.currency}</span></td>
       <td>${fmtShares(s.shares,s.currency)}</td><td class="t-muted">${fmtPrice(s.costPerShare,s.currency)}</td>
-      <td>${fmtPrice(s.sellPrice,s.currency)}</td>
+      <td>${fmtPrice(s.sellPrice,s.currency)}<div class="cell-sub">${fmtCur(sellNet,s.currency)}</div></td>
       <td class="t-muted">${s.buyDate}</td><td class="t-muted">${s.sellDate}</td>
       <td class="t-muted">${s.holdDays}天</td>
       <td class="${c} fw-500" title="${feeTitle}">${fmtCur(s.realizedPnL,s.currency)}${fees>0?' <span style="color:var(--text-4);font-size:10px">ⓘ</span>':''}</td>
