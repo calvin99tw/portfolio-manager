@@ -35,7 +35,7 @@
 ```
 pools      → id, poolTWD, poolUSD, usdRate
 buys       → id, name, ticker, currency, shares, costPerShare, buyFee, currentPrice, buyDate
-sells      → id, name, ticker, currency, shares, costPerShare, sellPrice, buyFee, sellFee, sellTax, buyDate, sellDate, holdDays, realizedPnL
+sells      → id, name, ticker, currency, shares, costPerShare, sellPrice, buyFee, sellFee, sellTax, buyDate, sellDate, holdDays, realizedPnL, annualized
 dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmount, exDate, note
 snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_rate（unique: user_id+date）
 ```
