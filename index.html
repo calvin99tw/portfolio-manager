@@ -1709,8 +1709,8 @@ function render(){
       <td class="${c}">${fmtPct(realReturnPct)}</td>
       <td>${fmtAnnualized(realAnn, s.holdDays)}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openSellEditModal(${s.id})">編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteSell(${s.id})">刪除</button>
+        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openSellEditModal('${s.id}')">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteSell('${s.id}')">刪除</button>
       </td>
     </tr>`;
   });
@@ -1737,8 +1737,8 @@ function render(){
       <td class="t-muted">${d.exDate}</td>
       <td class="t-muted" style="font-size:11px">${d.note||"-"}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openDividendEditModal(${d.id})">編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteDividend(${d.id})">刪除</button>
+        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openDividendEditModal('${d.id}')">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteDividend('${d.id}')">刪除</button>
       </td>
     </tr>`;
   });
