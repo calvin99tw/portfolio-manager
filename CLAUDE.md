@@ -97,6 +97,7 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 - **Cloudflare Worker**：新增路由時，`ALLOWED_ORIGINS` 不需更動；若 upstream API 會依 Accept header 回不同格式，記得在 fetch headers 明確指定
 - **CDN 腳本**：`index.html` 中的 CDN script tag 須固定版本號並附 `integrity`（sha384）+ `crossorigin="anonymous"`；升版時要重新計算 hash
 - **Supabase Anon Key**：publishable key，設計上可公開；安全依賴 RLS，每張資料表都需有 `user_id` 欄位 + policy
+- **Supabase Data API GRANT**：2026/10/30 起，public schema 的資料表需要明確 GRANT 才能透過 PostgREST/supabase-js 存取。**每次新增資料表都必須執行**：`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.<table> TO anon, authenticated;`
 - **CSV 備份**：`.gitignore` 已設 `*.csv`，個人財務資料不進 repo
 
 ---
