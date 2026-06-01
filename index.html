@@ -662,7 +662,7 @@ h1, .heading { color: var(--text-1); }
   <div class="modal-sub" id="priceModalSub"></div>
   <div style="margin-bottom:4px"><label class="form-label">目前現價</label><input id="p-price" type="number" step="0.01"></div>
   <div class="form-actions">
-    <button class="btn btn-primary" onclick="confirmUpdatePrice()">更新</button>
+    <button class="btn btn-primary" id="price-confirm-btn" onclick="confirmUpdatePrice()">更新</button>
     <button class="btn btn-action" onclick="closePriceModal()">取消</button>
   </div>
 </div></div>
@@ -680,7 +680,7 @@ h1, .heading { color: var(--text-1); }
     <div style="grid-column:1/-1"><label class="form-label">備註</label><input id="d-note" placeholder="例如：扣繳 5%、現金股息..."></div>
   </div>
   <div class="form-actions">
-    <button class="btn btn-primary" onclick="confirmDividend()">儲存配息紀錄</button>
+    <button class="btn btn-primary" id="div-confirm-btn" onclick="confirmDividend()">儲存配息紀錄</button>
     <button class="btn btn-action" onclick="closeDividendModal()">取消</button>
   </div>
 </div></div>
@@ -1264,6 +1264,8 @@ function closePriceModal(){ document.getElementById("priceModal").classList.remo
 async function confirmUpdatePrice(){
   const p=parseFloat(document.getElementById("p-price").value);
   if(isNaN(p)){showToast("請輸入有效價格",true);return;}
+  const confirmBtn = document.getElementById("price-confirm-btn");
+  if(confirmBtn) confirmBtn.disabled = true;
   const uid=currentUser?.id;
   try {
     const { error } = await sb.from('buys').update({currentPrice:p}).eq('ticker',priceTargetTicker).eq('user_id',uid);
@@ -1271,12 +1273,14 @@ async function confirmUpdatePrice(){
     buys=buys.map(b=>b.ticker===priceTargetTicker?{...b,currentPrice:p}:b);
     saveToLocalCache();
     updateStorageStatus(true);
+    failedAutoFetch.delete(priceTargetTicker);
+    closePriceModal(); render(); showToast("現價已更新");
   } catch(e) {
     console.warn("confirmUpdatePrice 失敗：",e);
-    showToast("儲存失敗，請確認網路連線",true); return;
+    showToast("儲存失敗，請確認網路連線",true);
+  } finally {
+    if(confirmBtn) confirmBtn.disabled = false;
   }
-  failedAutoFetch.delete(priceTargetTicker);
-  closePriceModal(); render(); showToast("現價已更新");
 }
 function toolbarEdit(){
   if(!sel) return;
@@ -2086,6 +2090,8 @@ async function confirmSell(){
     if(!confirm("賣出日晚於今天，確定要儲存？")) return;
   }
 
+  const confirmBtn = document.getElementById("s-confirm-btn");
+  if(confirmBtn) confirmBtn.disabled = true;
   const uid=currentUser?.id;
   try {
     if(editSellId) {
@@ -2146,6 +2152,8 @@ async function confirmSell(){
   } catch(e) {
     console.warn("confirmSell 失敗：",e);
     showToast("儲存失敗，請確認網路連線",true);
+  } finally {
+    if(confirmBtn) confirmBtn.disabled = false;
   }
 }
 async function deleteSell(id){
@@ -2218,6 +2226,8 @@ async function confirmDividend(){
   const note=document.getElementById("d-note").value.trim();
   if(isNaN(perShare)||isNaN(shares)||isNaN(net)||!exDate){showToast("請填寫必填欄位",true);return;}
   const grossAmount = perShare*shares;
+  const confirmBtn = document.getElementById("div-confirm-btn");
+  if(confirmBtn) confirmBtn.disabled = true;
   const uid=currentUser?.id;
   try {
     if(editDividendId) {
@@ -2240,6 +2250,8 @@ async function confirmDividend(){
   } catch(e) {
     console.warn("confirmDividend 失敗：",e);
     showToast("儲存失敗，請確認網路連線",true);
+  } finally {
+    if(confirmBtn) confirmBtn.disabled = false;
   }
 }
 async function deleteDividend(id){
