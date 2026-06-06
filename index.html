@@ -215,6 +215,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .pools-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 700px) { .pools-row { grid-template-columns: 1fr; } }
 .pool-card { padding: 18px 20px; background: var(--bg-elev-1); border: 1px solid var(--border); border-radius: 14px; }
+.pool-return-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
 .pool-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .pool-title { font-size: 12px; color: var(--text-2); font-weight: 500; letter-spacing: 0.3px; }
 .pool-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -412,11 +413,12 @@ h1, .heading { color: var(--text-1); }
 
   <!-- ═══ HOLDINGS TAB ═══ -->
   <div class="tab-content active" id="tab-holdings">
-    <div style="display:flex;justify-content:flex-end">
+    <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="seg-toggle">
         <button id="view-split" class="active" onclick="setView('split')">分池檢視</button>
         <button id="view-merged" onclick="setView('merged')">合併 (TWD)</button>
       </div>
+      <button class="btn btn-action" onclick="openFlowModal()" style="font-size:12px">入金 / 出金</button>
     </div>
 
     <div id="poolsContainer"></div>
@@ -504,10 +506,11 @@ h1, .heading { color: var(--text-1); }
   <!-- ═══ SETTINGS TAB ═══ -->
   <div class="tab-content" id="tab-settings">
     <div class="card" style="padding:24px">
-      <div style="font-size:13px;color:var(--text-2);margin-bottom:18px">投資池設定</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:18px">匯率設定</div>
+      <!-- poolTWD / poolUSD 保留為隱藏欄位供後端相容，不再開放使用者編輯 -->
+      <input type="number" id="poolTWD" value="0" style="display:none">
+      <input type="number" id="poolUSD" value="0" style="display:none">
       <div class="settings-row">
-        <div class="settings-field"><label class="form-label">台股池總額 (TWD)</label><input type="number" id="poolTWD" value="500000" oninput="onSettingChange()"></div>
-        <div class="settings-field"><label class="form-label">美股池總額 (USD)</label><input type="number" id="poolUSD" value="10000" oninput="onSettingChange()"></div>
         <div class="settings-field">
           <label class="form-label">USD/TWD 匯率（合併檢視用）</label>
           <div style="display:flex;gap:6px;align-items:center">
@@ -516,7 +519,7 @@ h1, .heading { color: var(--text-1); }
         </div>
       </div>
       <div style="font-size:11px;color:var(--text-4);margin-top:14px;line-height:1.7">
-        ※ 當有新資金移入投資池，直接修改池總額即可。閒置現金會自動計算（池總額 - 已投入成本 + 已實現損益 + 已收股息）<br>
+        ※ 投入本金由「入金 / 出金」紀錄加總，請在持倉頁工具列點「入金 / 出金」記錄資金進出<br>
         ※ 匯率僅用於「合併檢視」模式下將美股部位換算為 TWD，原幣別資料不會被改動<br>
         ※ 股價來源：TWSE OpenAPI（台股收盤價，每日 15:00 後更新）；匯率來源：中央銀行 CBC（每日更新）<br>
         ※ 行情於啟動與切回頁面時自動抓取，可點 Header 的 ↻ 手動更新
@@ -565,10 +568,11 @@ h1, .heading { color: var(--text-1); }
         <div><span style="color:var(--text-2)">年化報酬（持倉）</span> = ((市值 + 已收股息) / 總成本) ^ (365 / 持有天數) - 1</div>
         <div><span style="color:var(--text-2)">年化報酬（已賣出）</span> = (賣出總額 / 買入總成本) ^ (365 / 持有天數) - 1</div>
         <div><span style="color:var(--text-2)">均攤成本</span> = Σ(各批次股數 × 各批次成本) / 總股數</div>
-        <div><span style="color:var(--text-2)">池閒置現金</span> = 池總額 - 已投入成本 + 已實現損益 + 已收股息</div>
-        <div><span style="color:var(--text-2)">標的佔池比</span> = 該標的成本 / 對應池總額 × 100</div>
-        <div><span style="color:var(--text-2)">真實總報酬</span> = 未實現損益 + 已實現損益 + 已收股息</div>
-        <div><span style="color:var(--text-2)">真實總報酬率</span> = 真實總報酬 / 累計投入成本（目前持倉成本 + 已賣出股票的買入成本）</div>
+        <div><span style="color:var(--text-2)">投入本金</span> = Σ 入金 - Σ 出金（依幣別分別計算）</div>
+        <div><span style="color:var(--text-2)">可用餘額</span> = 投入本金 + 已實現損益 + 已收股息 - 已投入成本</div>
+        <div><span style="color:var(--text-2)">總資產</span> = 持股市值 + 可用餘額</div>
+        <div><span style="color:var(--text-2)">累計報酬</span> = 未實現損益 + 已實現損益 + 已收股息</div>
+        <div><span style="color:var(--text-2)">累計報酬率</span> = 累計報酬 / 投入本金</div>
         <div style="margin-top:6px;color:var(--text-4)">※ 持倉表格皆以原幣別呈現；合併檢視才換算為 TWD；年化報酬需持有滿 365 天後才顯示</div>
         <div style="margin-top:4px;color:var(--text-4)">※ 顏色語意：<span class="t-pos">紅色 = 正/漲/獲利</span>，<span class="t-neg">綠色 = 負/跌/虧損</span>（亞洲市場慣例）</div>
       </div>
@@ -682,6 +686,33 @@ h1, .heading { color: var(--text-1); }
   <div class="form-actions">
     <button class="btn btn-primary" id="div-confirm-btn" onclick="confirmDividend()">儲存配息紀錄</button>
     <button class="btn btn-action" onclick="closeDividendModal()">取消</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="flowModal"><div class="modal" style="width:380px">
+  <div class="modal-title">資金流水</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button id="flow-type-in"  class="btn btn-primary"  style="flex:1" onclick="setFlowType('入金')">入金</button>
+    <button id="flow-type-out" class="btn btn-action" style="flex:1" onclick="setFlowType('出金')">出金</button>
+  </div>
+  <div class="settings-row" style="margin-bottom:12px">
+    <div class="settings-field">
+      <label class="form-label">幣別</label>
+      <select id="flow-currency" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev-2);color:var(--text-1);font-family:inherit">
+        <option value="TWD">台股池 (TWD)</option>
+        <option value="USD">美股池 (USD)</option>
+      </select>
+    </div>
+    <div class="settings-field">
+      <label class="form-label" id="flow-amount-label">金額 (TWD)</label>
+      <input type="number" id="flow-amount" step="1" min="0" placeholder="0">
+    </div>
+  </div>
+  <div style="margin-bottom:12px"><label class="form-label">日期</label><input type="date" id="flow-date"></div>
+  <div style="margin-bottom:16px"><label class="form-label">備注（選填）</label><input type="text" id="flow-note" placeholder="例如：注資、提領..."></div>
+  <div class="form-actions">
+    <button class="btn btn-primary" id="flow-confirm-btn" onclick="confirmFlow()">確認</button>
+    <button class="btn btn-action" onclick="closeFlowModal()">取消</button>
   </div>
 </div></div>
 
@@ -914,15 +945,17 @@ async function saveSnapshot() {
   const twd_cost  = twdGs.reduce((a,g) => a + g.tc, 0);
   const usd_cost  = usdGs.reduce((a,g) => a + g.tc, 0);
   const today = new Date().toISOString().slice(0,10);
+  const twd_net_deposit = calcNetDeposit('TWD');
+  const usd_net_deposit = calcNetDeposit('USD');
   try {
     const { error } = await sb.from('snapshots').upsert(
-      { user_id: uid, date: today, twd_value, usd_value, twd_cost, usd_cost, usd_rate: usdRate },
+      { user_id: uid, date: today, twd_value, usd_value, twd_cost, usd_cost, usd_rate: usdRate, twd_net_deposit, usd_net_deposit },
       { onConflict: 'user_id,date' }
     );
     if(error) throw error;
     // 更新本地快照陣列
     const idx = snapshots.findIndex(s => s.date === today);
-    const entry = { date: today, twd_value, usd_value, twd_cost, usd_cost, usd_rate: usdRate };
+    const entry = { date: today, twd_value, usd_value, twd_cost, usd_cost, usd_rate: usdRate, twd_net_deposit, usd_net_deposit };
     if(idx >= 0) snapshots[idx] = entry; else snapshots.push(entry);
   } catch(e) {
     console.warn("snapshot 儲存失敗：", e);
@@ -932,14 +965,14 @@ async function saveSnapshot() {
 function saveToLocalCache() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      buys, sells, dividends,
+      buys, sells, dividends, poolFlows,
       settings: {
         poolTWD: parseFloat(document.getElementById("poolTWD")?.value)||0,
         poolUSD: parseFloat(document.getElementById("poolUSD")?.value)||0,
         usdRate: parseFloat(document.getElementById("usdRate")?.value)||32,
       },
       savedAt: new Date().toISOString(),
-      version: "4.0"
+      version: "4.1"
     }));
   } catch(e) { console.warn("快取至 localStorage 失敗：", e); }
 }
@@ -948,11 +981,12 @@ async function loadFromSupabase() {
   const uid = currentUser?.id;
   if (!uid) return;
   try {
-    const [buysRes, sellsRes, divsRes, poolsRes] = await Promise.all([
+    const [buysRes, sellsRes, divsRes, poolsRes, flowsRes] = await Promise.all([
       sb.from('buys').select('*').eq('user_id', uid),
       sb.from('sells').select('*').eq('user_id', uid),
       sb.from('dividends').select('*').eq('user_id', uid),
       sb.from('pools').select('*').eq('user_id', uid).limit(1),
+      sb.from('pool_flows').select('*').eq('user_id', uid).order('date', {ascending:true}),
     ]);
     if (buysRes.error) throw buysRes.error;
     if (sellsRes.error) throw sellsRes.error;
@@ -964,12 +998,30 @@ async function loadFromSupabase() {
       sells = sellsRes.data || [];
       dividends = divsRes.data || [];
     }
-    if (poolsRes.data?.length) {
-      const p = poolsRes.data[0];
-      if (p.poolTWD != null) document.getElementById("poolTWD").value = p.poolTWD;
-      if (p.poolUSD != null) document.getElementById("poolUSD").value = p.poolUSD;
-      if (p.usdRate != null) document.getElementById("usdRate").value = p.usdRate;
+    const p = poolsRes.data?.[0];
+    if (p?.usdRate != null) document.getElementById("usdRate").value = p.usdRate;
+
+    // pool_flows 載入
+    poolFlows = flowsRes.data || [];
+
+    // Migration: pool_flows 為空時，從舊 pools 資料建立初始入金記錄
+    if (poolFlows.length === 0 && p) {
+      const today = new Date().toISOString().slice(0,10);
+      const allBuys = buysRes.data || [];
+      const twdBuysAll = allBuys.filter(b=>b.currency==='TWD');
+      const usdBuysAll = allBuys.filter(b=>b.currency==='USD');
+      const twdDate = twdBuysAll.length>0 ? twdBuysAll.map(b=>b.buyDate).sort()[0] : today;
+      const usdDate = usdBuysAll.length>0 ? usdBuysAll.map(b=>b.buyDate).sort()[0] : today;
+      const rows = [];
+      if ((p.poolTWD||0) > 0) rows.push({currency:'TWD',type:'入金',amount:p.poolTWD,date:twdDate,note:'初始資金（v4.1 移轉）',user_id:uid});
+      if ((p.poolUSD||0) > 0) rows.push({currency:'USD',type:'入金',amount:p.poolUSD,date:usdDate,note:'初始資金（v4.1 移轉）',user_id:uid});
+      if (rows.length > 0) {
+        const {data: inserted, error: flowErr} = await sb.from('pool_flows').insert(rows).select();
+        if (!flowErr) poolFlows = inserted || rows;
+        else console.warn("pool_flows migration 失敗：", flowErr);
+      }
     }
+
     saveToLocalCache();
     updateStorageStatus(true);
   } catch(e) {
@@ -1098,7 +1150,7 @@ async function clearAllData() {
   }
 }
 
-let buys = [], sells = [], dividends = [], snapshots = [];
+let buys = [], sells = [], dividends = [], snapshots = [], poolFlows = [];
 let perfPeriod = "YTD";
 let perfChartInstance = null;
 let viewMode = 'split';
@@ -1178,25 +1230,31 @@ function groups() {
     const ret = pnl+td;
     const wd  = g.batches.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/ts;
     const ann = (Math.pow((tv+td)/tc,365/wd)-1)*100;
-    const poolSize = g.currency==="USD"
-      ? (parseFloat(document.getElementById("poolUSD")?.value)||1)
-      : (parseFloat(document.getElementById("poolTWD")?.value)||1);
+    const netDep = calcNetDeposit(g.currency);
+    const poolSize = netDep > 0 ? netDep : 1;
     const ap = tc/poolSize*100;
     return {...g,ts,ac,tc,tv,td,pnl,pct,ret,ann,ap,tFee,wd};
   });
 }
 
+function calcNetDeposit(currency) {
+  return poolFlows.filter(f=>f.currency===currency)
+    .reduce((a,f)=>a+(f.type==='入金'?f.amount:-f.amount),0);
+}
+
 function poolStats(currency) {
-  const poolKey = currency==="USD" ? "poolUSD" : "poolTWD";
-  const total = parseFloat(document.getElementById(poolKey)?.value)||0;
+  const netDeposit = calcNetDeposit(currency);
   const gs = groups().filter(g=>g.currency===currency);
   const invested = gs.reduce((a,g)=>a+g.tc,0);
   const marketValue = gs.reduce((a,g)=>a+g.tv,0);
   const unrealized = marketValue - invested;
   const dividendsTotal = dividends.filter(d=>d.currency===currency).reduce((a,d)=>a+d.netAmount,0);
   const realized = sells.filter(s=>s.currency===currency).reduce((a,s)=>a+s.realizedPnL,0);
-  const idle = total - invested + realized + dividendsTotal;
-  return { total, invested, marketValue, unrealized, dividendsTotal, realized, idle };
+  const idle = netDeposit + realized + dividendsTotal - invested;
+  const totalAssets = marketValue + idle;
+  const cumulativeReturn = unrealized + realized + dividendsTotal;
+  const flowCount = poolFlows.filter(f=>f.currency===currency).length;
+  return { total: netDeposit, invested, marketValue, unrealized, dividendsTotal, realized, idle, totalAssets, cumulativeReturn, flowCount };
 }
 
 // ══════════════════════════════════════════════════════
@@ -1510,169 +1568,101 @@ function render(){
   const twdPool = poolStats("TWD");
   const usdPool = poolStats("USD");
 
-  const container = document.getElementById("poolsContainer");
-  if(viewMode==='split'){
-    const twdPct = twdPool.invested>0 ? twdPool.unrealized/twdPool.invested*100 : 0;
-    const usdPct = usdPool.invested>0 ? usdPool.unrealized/usdPool.invested*100 : 0;
-    const twdTotalReturn = twdPool.unrealized + twdPool.realized + twdPool.dividendsTotal;
-    const usdTotalReturn = usdPool.unrealized + usdPool.realized + usdPool.dividendsTotal;
-    const twdSoldCost = sells.filter(s=>s.currency==="TWD").reduce((a,s)=>a + s.shares*s.costPerShare, 0);
-    const usdSoldCost = sells.filter(s=>s.currency==="USD").reduce((a,s)=>a + s.shares*s.costPerShare, 0);
-    const twdTotalCost = twdPool.invested + twdSoldCost;
-    const usdTotalCost = usdPool.invested + usdSoldCost;
-    const twdTotalRetPct = twdTotalCost>0 ? twdTotalReturn/twdTotalCost*100 : 0;
-    const usdTotalRetPct = usdTotalCost>0 ? usdTotalReturn/usdTotalCost*100 : 0;
-
-    // 池年化：以現有持倉的股數加權平均持有天數計算
-    const twdBuys = buys.filter(b=>b.currency==="TWD");
-    const twdSharesAll = twdBuys.reduce((a,b)=>a+b.shares,0);
-    const twdPoolWd = twdSharesAll>0 ? twdBuys.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/twdSharesAll : 0;
-    const twdPoolAnn = twdPoolWd>0&&twdTotalCost>0 ? (Math.pow((twdTotalCost+twdTotalReturn)/twdTotalCost,365/twdPoolWd)-1)*100 : 0;
-    const usdBuys = buys.filter(b=>b.currency==="USD");
-    const usdSharesAll = usdBuys.reduce((a,b)=>a+b.shares,0);
-    const usdPoolWd = usdSharesAll>0 ? usdBuys.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/usdSharesAll : 0;
-    const usdPoolAnn = usdPoolWd>0&&usdTotalCost>0 ? (Math.pow((usdTotalCost+usdTotalReturn)/usdTotalCost,365/usdPoolWd)-1)*100 : 0;
-
-    container.innerHTML = `<div class="pools-row">
-      <div class="pool-card">
-        <div class="pool-header">
-          <div class="pool-title">台股池 · TWD</div>
-          <span class="${pnlClass(twdPool.unrealized)}" style="font-size:11px">未實現 ${fmtPct(twdPct)}</span>
-        </div>
-        <div class="pool-stats">
-          <div><div class="pool-stat-label">池總額</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.total)}</div><div class="pool-stat-sub">可投入上限</div></div>
-          <div><div class="pool-stat-label">已投入成本</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.invested)}</div><div class="pool-stat-sub">${twdPool.total>0?(twdPool.invested/twdPool.total*100).toFixed(1):0}% 使用</div></div>
-          <div><div class="pool-stat-label">閒置現金</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.idle)}</div><div class="pool-stat-sub">可加碼/新標的</div></div>
-          <div><div class="pool-stat-label">持股市值</div><div class="pool-stat-value">NT$ ${fmtN(twdPool.marketValue)}</div></div>
-          <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(twdPool.unrealized)}">NT$ ${fmtN(twdPool.unrealized)}</div></div>
-          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${twdPool.dividendsTotal!==0?pnlClass(twdPool.dividendsTotal):''}">NT$ ${fmtN(twdPool.dividendsTotal)}</div><div class="pool-stat-sub">${dividends.filter(d=>d.currency==="TWD").length} 筆</div></div>
-          <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${twdPool.realized!==0?pnlClass(twdPool.realized):''}">NT$ ${fmtN(twdPool.realized)}</div><div class="pool-stat-sub">${sells.filter(s=>s.currency==="TWD").length} 筆賣出</div></div>
-        </div>
-        <div class="pool-divider"></div>
-        <div class="pool-key-stat">
-          <span class="pool-key-label">真實總報酬</span>
-          <span><span class="pool-key-value ${pnlClass(twdTotalReturn)}">NT$ ${fmtN(twdTotalReturn)}</span><span class="pool-key-pct ${pnlClass(twdTotalRetPct)}">${fmtPct(twdTotalRetPct)}</span></span>
-        </div>
-        <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 NT$ ${fmtN(twdTotalCost)}</div>
-        <div style="font-size:10px;color:var(--text-4);margin-top:6px">年化報酬 ${fmtAnnualized(twdPoolAnn, twdPoolWd)}</div>
-      </div>
-      <div class="pool-card">
-        <div class="pool-header">
-          <div class="pool-title">美股池 · USD</div>
-          <span class="${pnlClass(usdPool.unrealized)}" style="font-size:11px">未實現 ${fmtPct(usdPct)}</span>
-        </div>
-        <div class="pool-stats">
-          <div><div class="pool-stat-label">池總額</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.total,"USD")}</div><div class="pool-stat-sub">可投入上限</div></div>
-          <div><div class="pool-stat-label">已投入成本</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.invested,"USD")}</div><div class="pool-stat-sub">${usdPool.total>0?(usdPool.invested/usdPool.total*100).toFixed(1):0}% 使用</div></div>
-          <div><div class="pool-stat-label">閒置現金</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.idle,"USD")}</div><div class="pool-stat-sub">可加碼/新標的</div></div>
-          <div><div class="pool-stat-label">持股市值</div><div class="pool-stat-value">$ ${fmtMoney(usdPool.marketValue,"USD")}</div></div>
-          <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(usdPool.unrealized)}">$ ${fmtMoney(usdPool.unrealized,"USD")}</div></div>
-          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${usdPool.dividendsTotal!==0?pnlClass(usdPool.dividendsTotal):''}">$ ${fmtMoney(usdPool.dividendsTotal,"USD")}</div><div class="pool-stat-sub">${dividends.filter(d=>d.currency==="USD").length} 筆</div></div>
-          <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${usdPool.realized!==0?pnlClass(usdPool.realized):''}">$ ${fmtMoney(usdPool.realized,"USD")}</div><div class="pool-stat-sub">${sells.filter(s=>s.currency==="USD").length} 筆賣出</div></div>
-        </div>
-        <div class="pool-divider"></div>
-        <div class="pool-key-stat">
-          <span class="pool-key-label">真實總報酬</span>
-          <span><span class="pool-key-value ${pnlClass(usdTotalReturn)}">$ ${fmtMoney(usdTotalReturn,"USD")}</span><span class="pool-key-pct ${pnlClass(usdTotalRetPct)}">${fmtPct(usdTotalRetPct)}</span></span>
-        </div>
-        <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 $ ${fmtMoney(usdTotalCost,"USD")}</div>
-        <div style="font-size:10px;color:var(--text-4);margin-top:6px">年化報酬 ${fmtAnnualized(usdPoolAnn, usdPoolWd)}</div>
-      </div>
-    </div>`;
-  } else {
-    const total = twdPool.total + toTWD(usdPool.total,"USD");
-    const invested = twdPool.invested + toTWD(usdPool.invested,"USD");
-    const marketVal = twdPool.marketValue + toTWD(usdPool.marketValue,"USD");
-    const unrealized = twdPool.unrealized + toTWD(usdPool.unrealized,"USD");
-    const divs = twdPool.dividendsTotal + toTWD(usdPool.dividendsTotal,"USD");
-    const realized = twdPool.realized + toTWD(usdPool.realized,"USD");
-    const idle = total - invested + realized + divs;
-    const trp = invested>0 ? unrealized/invested*100 : 0;
-    const totalReturn = unrealized + realized + divs;
-    const twdSoldCost = sells.filter(s=>s.currency==="TWD").reduce((a,s)=>a + s.shares*s.costPerShare, 0);
-    const usdSoldCost = sells.filter(s=>s.currency==="USD").reduce((a,s)=>a + s.shares*s.costPerShare, 0);
-    const totalCost = invested + twdSoldCost + toTWD(usdSoldCost,"USD");
-    const totalRetPct = totalCost>0 ? totalReturn/totalCost*100 : 0;
-    const mergedSharesAll = buys.reduce((a,b)=>a+b.shares,0);
-    const mergedPoolWd = mergedSharesAll>0 ? buys.reduce((a,b)=>a+b.shares*dFrom(b.buyDate),0)/mergedSharesAll : 0;
-    const mergedPoolAnn = mergedPoolWd>0&&totalCost>0 ? (Math.pow((totalCost+totalReturn)/totalCost,365/mergedPoolWd)-1)*100 : 0;
-
-    container.innerHTML = `
-      <div class="pool-card">
-        <div class="pool-header">
-          <div class="pool-title">合併池 · TWD 換算</div>
-          <span class="${pnlClass(unrealized)}" style="font-size:11px">未實現 ${fmtPct(trp)}</span>
-        </div>
-        <div class="pool-stats">
-          <div><div class="pool-stat-label">池總額</div><div class="pool-stat-value">NT$ ${fmtN(total)}</div><div class="pool-stat-sub">匯率 ${getRate()}</div></div>
-          <div><div class="pool-stat-label">已投入成本</div><div class="pool-stat-value">NT$ ${fmtN(invested)}</div><div class="pool-stat-sub">${total>0?(invested/total*100).toFixed(1):0}% 使用</div></div>
-          <div><div class="pool-stat-label">閒置現金</div><div class="pool-stat-value">NT$ ${fmtN(idle)}</div><div class="pool-stat-sub">可加碼/新標的</div></div>
-          <div><div class="pool-stat-label">持股市值</div><div class="pool-stat-value">NT$ ${fmtN(marketVal)}</div></div>
-          <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(unrealized)}">NT$ ${fmtN(unrealized)}</div></div>
-          <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${divs!==0?pnlClass(divs):''}">NT$ ${fmtN(divs)}</div><div class="pool-stat-sub">${dividends.length} 筆</div></div>
-          <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${realized!==0?pnlClass(realized):''}">NT$ ${fmtN(realized)}</div><div class="pool-stat-sub">${sells.length} 筆賣出</div></div>
-        </div>
-        <div class="pool-divider"></div>
-        <div class="pool-key-stat">
-          <span class="pool-key-label">真實總報酬</span>
-          <span><span class="pool-key-value ${pnlClass(totalReturn)}">NT$ ${fmtN(totalReturn)}</span><span class="pool-key-pct ${pnlClass(totalRetPct)}">${fmtPct(totalRetPct)}</span></span>
-        </div>
-        <div style="font-size:10px;color:var(--text-4);margin-top:4px">未實現 + 已實現 + 股息 ／ 累計成本 NT$ ${fmtN(totalCost)}</div>
-        <div style="font-size:10px;color:var(--text-4);margin-top:6px">年化報酬 ${fmtAnnualized(mergedPoolAnn, mergedPoolWd)}</div>
-      </div>`;
-  }
-
-  // ── Allocation bar ──
+  // ── Allocation bar (inline, market-value based) ──
   const PALETTE = ["#d97706","#0d9488","#4f46e5","#a78bfa","#475569","#92400e","#65a30d","#c084fc"];
   const colorFor = (idx) => PALETTE[idx % PALETTE.length];
 
-  function buildAllocBar(title, gsForBar, poolTotal, currency, poolIdle) {
-    const segs = gsForBar.map((g,i) => ({
-      g,
-      pct: poolTotal>0 ? g.tc/poolTotal*100 : 0,
-      color: colorFor(i),
-      amount: g.tc
-    })).sort((a,b) => b.pct - a.pct);
-    const usedPct = segs.reduce((a,s)=>a+s.pct,0);
-    const idleAmount = poolIdle !== undefined ? poolIdle : poolTotal - segs.reduce((a,s)=>a+s.amount,0);
-    const idlePct = poolTotal > 0 ? Math.max(0, idleAmount / poolTotal * 100) : Math.max(0, 100 - usedPct);
+  function buildAllocInline(gsForBar, totalAssets, idle, currency) {
     const symbol = currency==="USD" ? "$ " : "NT$ ";
-
+    const segs = gsForBar.map((g,i) => ({
+      g, color: colorFor(i),
+      pct: totalAssets>0 ? Math.max(0,g.tv/totalAssets*100) : 0,
+      amount: g.tv
+    })).sort((a,b) => b.pct - a.pct);
+    const idlePct = totalAssets>0 ? Math.max(0, idle/totalAssets*100) : 0;
     const segHTML = segs.map(s =>
-      `<div style="width:${Math.max(0,s.pct)}%;background:${s.color};height:100%;transition:width 0.5s;border-right:1px solid var(--bg);box-sizing:border-box" title="${s.g.name}: ${s.pct.toFixed(1)}% / ${symbol}${fmtMoney(s.amount,currency)}"></div>`
-    ).join("");
-
+      `<div style="width:${s.pct}%;background:${s.color};height:100%;border-right:1px solid var(--bg);box-sizing:border-box;transition:width 0.5s" title="${s.g.name}: ${s.pct.toFixed(1)}% / ${symbol}${fmtMoney(s.amount,currency)}"></div>`
+    ).join("") + (idlePct>0 ? `<div style="width:${idlePct}%;background:var(--bg-elev-3);height:100%;border-left:${segs.length?'1px solid var(--bg)':'none'};box-sizing:border-box" title="可用餘額: ${idlePct.toFixed(1)}%"></div>` : "");
     const legendHTML = segs.map(s =>
       `<span class="alloc-legend-item"><span class="dot" style="background:${s.color}"></span><span style="color:var(--text-1)">${s.g.name}</span> <span style="color:var(--text-3)">${s.pct.toFixed(1)}%</span> <span style="color:var(--text-4);font-size:10px">(${symbol}${fmtMoney(s.amount,currency)})</span></span>`
-    ).join("");
+    ).join("") + `<span class="alloc-legend-item"><span class="dot" style="background:var(--bg-elev-3);border:1px solid var(--border-strong)"></span><span style="color:var(--text-3)">可用餘額</span> <span style="color:var(--text-3)">${idlePct.toFixed(1)}%</span></span>`;
+    return `<div class="alloc-bar" style="margin:12px 0 6px">${segHTML}</div><div class="alloc-legend">${legendHTML}</div>`;
+  }
 
-    return `<div class="card" style="padding:18px 20px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:baseline">
-        <span style="font-size:12px;color:var(--text-2);font-weight:500">${title}</span>
-        <span style="font-size:11px;color:var(--text-4)">已投入 ${usedPct.toFixed(1)}% ／ 閒置 ${idlePct.toFixed(1)}% (${symbol}${fmtMoney(idleAmount,currency)})</span>
+  function poolCardHTML(title, pool, currency, gsForPool) {
+    const sym = currency==="USD" ? "$ " : "NT$ ";
+    const fmt = v => sym + fmtMoney(v, currency);
+    const retPct = pool.total>0 ? pool.cumulativeReturn/pool.total*100 : 0;
+    return `<div class="pool-card">
+      <div class="pool-header" style="margin-bottom:10px">
+        <div class="pool-title">${title}</div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--text-4);margin-bottom:2px">總資產</div>
+          <div style="font-size:18px;font-weight:600;color:var(--text-1)">${fmt(pool.totalAssets)}</div>
+        </div>
       </div>
-      <div class="alloc-bar">${segHTML}<div style="flex:1;border-left:${segs.length?'1px solid var(--bg)':'none'};box-sizing:border-box"></div></div>
-      <div class="alloc-legend">${legendHTML}<span class="alloc-legend-item"><span class="dot" style="background:var(--bg-elev-3);border:1px solid var(--border-strong)"></span><span style="color:var(--text-3)">閒置</span> <span style="color:var(--text-3)">${idlePct.toFixed(1)}%</span></span></div>
+      ${buildAllocInline(gsForPool, pool.totalAssets, pool.idle, currency)}
+      <div class="pool-divider"></div>
+      <div class="pool-stats">
+        <div>
+          <div class="pool-stat-label">投入本金</div>
+          <div class="pool-stat-value">${fmt(pool.total)}</div>
+          <div class="pool-stat-sub">${pool.flowCount} 筆</div>
+        </div>
+        <div>
+          <div class="pool-stat-label">持股市值</div>
+          <div class="pool-stat-value">${fmt(pool.marketValue)}</div>
+          <div class="pool-stat-sub">已投入成本 ${fmtMoney(pool.invested,currency)}</div>
+        </div>
+        <div>
+          <div class="pool-stat-label">可用餘額</div>
+          <div class="pool-stat-value">${fmt(pool.idle)}</div>
+          <div class="pool-stat-sub">可加碼/新標的</div>
+        </div>
+      </div>
+      <div class="pool-divider"></div>
+      <div class="pool-return-grid">
+        <div><div class="pool-stat-label">未實現損益</div><div class="pool-stat-value ${pnlClass(pool.unrealized)}">${fmt(pool.unrealized)}</div></div>
+        <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${pool.realized!==0?pnlClass(pool.realized):''}">${fmt(pool.realized)}</div></div>
+        <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${pool.dividendsTotal!==0?pnlClass(pool.dividendsTotal):''}">${fmt(pool.dividendsTotal)}</div></div>
+        <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;display:flex;justify-content:space-between;align-items:center">
+          <div class="pool-stat-label" style="font-size:11px">累計報酬</div>
+          <div><span class="pool-key-value ${pnlClass(pool.cumulativeReturn)}">${fmt(pool.cumulativeReturn)}</span><span class="pool-key-pct ${retPct!==0?pnlClass(retPct):''}">${fmtPct(retPct)}</span></div>
+        </div>
+      </div>
     </div>`;
   }
 
+  const container = document.getElementById("poolsContainer");
+  if(viewMode==='split'){
+    const twdGs = gs.filter(g=>g.currency==="TWD");
+    const usdGs = gs.filter(g=>g.currency==="USD");
+    container.innerHTML = `<div class="pools-row">
+      ${poolCardHTML("台股池 · TWD", twdPool, "TWD", twdGs)}
+      ${poolCardHTML("美股池 · USD", usdPool, "USD", usdGs)}
+    </div>`;
+  } else {
+    const total      = twdPool.total      + toTWD(usdPool.total,"USD");
+    const invested   = twdPool.invested   + toTWD(usdPool.invested,"USD");
+    const marketVal  = twdPool.marketValue+ toTWD(usdPool.marketValue,"USD");
+    const unrealized = twdPool.unrealized + toTWD(usdPool.unrealized,"USD");
+    const divs       = twdPool.dividendsTotal + toTWD(usdPool.dividendsTotal,"USD");
+    const realized   = twdPool.realized   + toTWD(usdPool.realized,"USD");
+    const idle       = twdPool.idle       + toTWD(usdPool.idle,"USD");
+    const totalAssets= marketVal + idle;
+    const cumulativeReturn = unrealized + realized + divs;
+    const retPct     = total>0 ? cumulativeReturn/total*100 : 0;
+    const mergedGs   = gs.map((g,i) => ({...g, tv: toTWD(g.tv,g.currency), tc: toTWD(g.tc,g.currency)}));
+    const mergedPool = {total, invested, marketValue:marketVal, unrealized, dividendsTotal:divs, realized, idle, totalAssets, cumulativeReturn, flowCount: poolFlows.length};
+    container.innerHTML = poolCardHTML("合併池 · TWD 換算 （匯率 "+getRate()+"）", mergedPool, "TWD", mergedGs);
+  }
+
+  // allocCard 不再單獨顯示
   const allocContainer = document.getElementById("allocCard");
   allocContainer.style.padding = "0";
   allocContainer.style.background = "transparent";
   allocContainer.style.border = "none";
-
-  if(viewMode==='split'){
-    const twdGroups = gs.filter(g=>g.currency==="TWD");
-    const usdGroups = gs.filter(g=>g.currency==="USD");
-    const twdHTML = buildAllocBar("台股池配置 · TWD", twdGroups, twdPool.total, "TWD", twdPool.idle);
-    const usdHTML = buildAllocBar("美股池配置 · USD", usdGroups, usdPool.total, "USD", usdPool.idle);
-    allocContainer.innerHTML = `<div class="pools-row">${twdHTML}${usdHTML}</div>`;
-  } else {
-    const totalTWD = twdPool.total + toTWD(usdPool.total,"USD");
-    const mergedGs = gs.map(g => ({...g, tc: toTWD(g.tc, g.currency)}));
-    const mergedIdle = twdPool.idle + toTWD(usdPool.idle,"USD");
-    allocContainer.innerHTML = buildAllocBar("合併資金配置 · TWD 換算", mergedGs, totalTWD, "TWD", mergedIdle);
-  }
+  allocContainer.innerHTML = "";
 
   // ── Alerts ──
   const hot=gs.filter(g=>g.pct>=hotT), ov=gs.filter(g=>g.pct<=ovT);
@@ -2264,6 +2254,56 @@ async function deleteDividend(id){
     saveToLocalCache(); updateStorageStatus(true);
   } catch(e) { showToast("刪除失敗，請確認網路連線",true); return; }
   render(); showToast("已刪除");
+}
+
+// ── 入金/出金 ──
+let _flowType = '入金';
+function openFlowModal(){
+  _flowType = '入金';
+  setFlowType('入金');
+  document.getElementById("flow-currency").value = "TWD";
+  document.getElementById("flow-amount").value = "";
+  document.getElementById("flow-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("flow-note").value = "";
+  document.getElementById("flowModal").classList.add("open");
+}
+function closeFlowModal(){
+  document.getElementById("flowModal").classList.remove("open");
+}
+function setFlowType(type){
+  _flowType = type;
+  document.getElementById("flow-type-in").className  = type==='入金' ? "btn btn-primary" : "btn btn-action";
+  document.getElementById("flow-type-out").className = type==='出金' ? "btn btn-primary" : "btn btn-action";
+  document.getElementById("flow-type-in").style.flex  = "1";
+  document.getElementById("flow-type-out").style.flex = "1";
+}
+document.getElementById("flow-currency")?.addEventListener("change", function(){
+  document.getElementById("flow-amount-label").textContent = "金額 (" + this.value + ")";
+});
+async function confirmFlow(){
+  const currency = document.getElementById("flow-currency").value;
+  const amount = parseFloat(document.getElementById("flow-amount").value);
+  const date = document.getElementById("flow-date").value;
+  const note = document.getElementById("flow-note").value.trim();
+  if(!amount || amount<=0){showToast("請輸入有效金額",true);return;}
+  if(!date){showToast("請選擇日期",true);return;}
+  const confirmBtn = document.getElementById("flow-confirm-btn");
+  if(confirmBtn) confirmBtn.disabled = true;
+  const uid = currentUser?.id;
+  try {
+    const newFlow = {id:crypto.randomUUID(),user_id:uid,currency,type:_flowType,amount,date,note};
+    const {error} = await sb.from('pool_flows').insert(newFlow);
+    if(error) throw error;
+    poolFlows.push(newFlow);
+    saveToLocalCache(); updateStorageStatus(true);
+    closeFlowModal(); render();
+    showToast(`已記錄${_flowType} ${currency==="TWD"?"NT$ ":"$ "}${amount.toLocaleString()}`);
+  } catch(e){
+    console.warn("pool_flows insert 失敗：",e);
+    showToast("儲存失敗，請確認網路連線",true);
+  } finally {
+    if(confirmBtn) confirmBtn.disabled = false;
+  }
 }
 
 function switchTab(name){
