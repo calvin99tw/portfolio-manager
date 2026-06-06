@@ -414,11 +414,11 @@ h1, .heading { color: var(--text-1); }
   <!-- ═══ HOLDINGS TAB ═══ -->
   <div class="tab-content active" id="tab-holdings">
     <div style="display:flex;justify-content:space-between;align-items:center">
+      <button class="btn btn-action" onclick="openFlowModal()" style="font-size:12px">入金 / 出金</button>
       <div class="seg-toggle">
         <button id="view-split" class="active" onclick="setView('split')">分池檢視</button>
         <button id="view-merged" onclick="setView('merged')">合併 (TWD)</button>
       </div>
-      <button class="btn btn-action" onclick="openFlowModal()" style="font-size:12px">入金 / 出金</button>
     </div>
 
     <div id="poolsContainer"></div>
