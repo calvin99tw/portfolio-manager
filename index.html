@@ -1064,6 +1064,10 @@ async function syncLocalToSupabase() {
     const { error } = await sb.from('dividends').upsert(dividends.map(d=>({...d,user_id:uid})), {onConflict:'id'});
     if (error) throw error;
   }
+  if (poolFlows.length) {
+    const { error } = await sb.from('pool_flows').upsert(poolFlows.map(f=>({...f,user_id:uid})), {onConflict:'id'});
+    if (error) throw error;
+  }
   await upsertPools();
 }
 
@@ -1105,6 +1109,7 @@ async function resetToSample() {
       sb.from('buys').delete().eq('user_id', uid),
       sb.from('sells').delete().eq('user_id', uid),
       sb.from('dividends').delete().eq('user_id', uid),
+      sb.from('pool_flows').delete().eq('user_id', uid),
     ]);
     const sampleBuys = SAMPLE_DATA.buys.map(b => ({...b, id: crypto.randomUUID(), user_id: uid}));
     const { error } = await sb.from('buys').insert(sampleBuys);
@@ -1112,6 +1117,7 @@ async function resetToSample() {
     buys = sampleBuys;
     sells = [];
     dividends = [];
+    poolFlows = [];
     document.getElementById("poolTWD").value = SAMPLE_DATA.settings.poolTWD;
     document.getElementById("poolUSD").value = SAMPLE_DATA.settings.poolUSD;
     document.getElementById("usdRate").value = SAMPLE_DATA.settings.usdRate;
@@ -1137,8 +1143,9 @@ async function clearAllData() {
       sb.from('sells').delete().eq('user_id', uid),
       sb.from('dividends').delete().eq('user_id', uid),
       sb.from('pools').delete().eq('user_id', uid),
+      sb.from('pool_flows').delete().eq('user_id', uid),
     ]);
-    buys = []; sells = []; dividends = [];
+    buys = []; sells = []; dividends = []; poolFlows = [];
     localStorage.removeItem(STORAGE_KEY);
     sel = null;
     updateStorageStatus(true);
