@@ -9,7 +9,7 @@
 ## 專案概述
 
 個人投資組合管理工具，同時管理台股（TWD）與美股（USD）。
-正式版本：`index.html`（v4，Supabase + GitHub Pages）
+正式版本：`index.html`（v4.1，Supabase + GitHub Pages）
 封存版本：`archive/投資組合管理.html`（v3.3.1，純 HTML + localStorage）
 
 ---
@@ -33,11 +33,12 @@
 - 資料表：
 
 ```
-pools      → id, poolTWD, poolUSD, usdRate
-buys       → id, name, ticker, currency, shares, costPerShare, buyFee, currentPrice, buyDate
-sells      → id, name, ticker, currency, shares, costPerShare, sellPrice, buyFee, sellFee, sellTax, buyDate, sellDate, holdDays, realizedPnL, annualized
-dividends  → id, name, ticker, currency, perShare, shares, grossAmount, netAmount, exDate, note
-snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_rate（unique: user_id+date）
+pools       → id, poolTWD, poolUSD, usdRate（poolTWD/poolUSD 已廢棄，欄位保留）
+buys        → id, name, ticker, currency, shares, costPerShare, buyFee, currentPrice, buyDate
+sells       → id, name, ticker, currency, shares, costPerShare, sellPrice, buyFee, sellFee, sellTax, buyDate, sellDate, holdDays, realizedPnL, annualized
+dividends   → id, name, ticker, currency, perShare, shares, grossAmount, netAmount, exDate, note
+snapshots   → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_rate, twd_net_deposit, usd_net_deposit（unique: user_id+date）
+pool_flows  → id, user_id, currency, type(入金/出金), amount, date, note（T9 新增）
 ```
 
 ---
@@ -62,6 +63,7 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 | T6 | 美股股價自動抓取 | ✅ 完成 | Yahoo Finance v8，共用 Cloudflare Worker；含 ⚠ 失敗指示器、欄位合併、UUID onclick 修正，詳見 docs/T6-summary.md |
 | T7 | 資料移轉 + 正式切換 | ✅ 完成 | v3 封存至 archive/，README 改寫為 v4，詳見 docs/T7-summary.md |
 | T8 | 績效歷史快照 + 折線圖 | ✅ 完成 | snapshots 資料表，每次更新行情自動記錄，Chart.js 折線圖 Tab，詳見 docs/T8-summary.md |
+| T9 | v4.1 資金池重構 | ✅ 完成 | pool_flows 資料表，入金/出金 modal，pool card 四區塊重構，詳見 docs/T9-summary.md |
 
 **Cloudflare Worker**：`https://raspy-cherry-f806.calvin99-tw.workers.dev`（已部署，代理 TWSE / CBC / TAIFEX / Yahoo Finance）
 - 原始碼：`infra/worker.js`（版控於此 repo）
@@ -75,8 +77,8 @@ snapshots  → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_
 
 | 優先度 | 功能 | 說明 |
 |--------|------|------|
-| 中 | 池間資金轉移 | 從台股池轉到美股池（含匯率），有歷史紀錄 |
-| 中 | 池總額變動歷史 | 記錄何時注資/提領 |
+| 中 | 入金/出金歷史查詢 | 在 UI 中列出 pool_flows 紀錄，支援刪除 |
+| 中 | 池間資金轉移 | 從台股池轉到美股池（含匯率換算），同時記兩筆 pool_flows |
 | 中 | 目標配置與偏離警示 | 設定每個標的的目標佔比 |
 | 低 | 備注欄位 | 每筆買入可加投資理由 |
 | 低 | 稅後報酬計算 | 區分股息與資本利得稅率 |
