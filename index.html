@@ -406,6 +406,7 @@ h1, .heading { color: var(--text-1); }
       <button class="tab active" onclick="switchTab('holdings')">📊 持倉中</button>
       <button class="tab" onclick="switchTab('history')">📋 交易歷史</button>
       <button class="tab" onclick="switchTab('dividends')">💰 股息歷史</button>
+      <button class="tab" onclick="switchTab('flows')">💵 資金明細</button>
       <button class="tab" onclick="switchTab('performance')">📈 績效</button>
       <button class="tab" onclick="switchTab('settings')">⚙️ 設定</button>
     </div>
@@ -579,6 +580,21 @@ h1, .heading { color: var(--text-1); }
     </div>
   </div>
 
+  <!-- ═══ FLOWS TAB ═══ -->
+  <div class="tab-content" id="tab-flows">
+    <div class="card" style="overflow:hidden">
+      <div id="flowsSummaryGrid" style="padding:18px 20px 0"></div>
+      <div class="section-header" style="margin-top:8px"><span>資金流水紀錄</span></div>
+      <table class="data-table">
+        <thead><tr>
+          <th style="text-align:left;padding-left:20px">日期</th>
+          <th>幣別</th><th>類型</th><th>金額</th><th>備注</th><th></th>
+        </tr></thead>
+        <tbody id="flowsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="tab-content" id="tab-performance">
     <div class="card" style="padding:24px">
       <div class="perf-header">
@@ -690,7 +706,7 @@ h1, .heading { color: var(--text-1); }
 </div></div>
 
 <div class="modal-overlay" id="flowModal"><div class="modal" style="width:380px">
-  <div class="modal-title">資金流水</div>
+  <div class="modal-title" id="flowModalTitle">資金流水</div>
   <div style="display:flex;gap:8px;margin-bottom:16px">
     <button id="flow-type-in"  class="btn btn-primary"  style="flex:1" onclick="setFlowType('入金')">入金</button>
     <button id="flow-type-out" class="btn btn-action" style="flex:1" onclick="setFlowType('出金')">出金</button>
@@ -711,7 +727,7 @@ h1, .heading { color: var(--text-1); }
   <div style="margin-bottom:12px"><label class="form-label">日期</label><input type="date" id="flow-date"></div>
   <div style="margin-bottom:16px"><label class="form-label">備注（選填）</label><input type="text" id="flow-note" placeholder="例如：注資、提領..."></div>
   <div class="form-actions">
-    <button class="btn btn-primary" id="flow-confirm-btn" onclick="confirmFlow()">確認</button>
+    <button class="btn btn-primary" id="flow-confirm-btn" onclick="confirmFlow()">儲存</button>
     <button class="btn btn-action" onclick="closeFlowModal()">取消</button>
   </div>
 </div></div>
@@ -2265,17 +2281,22 @@ async function deleteDividend(id){
 
 // ── 入金/出金 ──
 let _flowType = '入金';
+let _editingFlowId = null;
 function openFlowModal(){
+  _editingFlowId = null;
   _flowType = '入金';
   setFlowType('入金');
   document.getElementById("flow-currency").value = "TWD";
+  document.getElementById("flow-amount-label").textContent = "金額 (TWD)";
   document.getElementById("flow-amount").value = "";
   document.getElementById("flow-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("flow-note").value = "";
+  document.getElementById("flowModalTitle").textContent = "資金流水";
   document.getElementById("flowModal").classList.add("open");
 }
 function closeFlowModal(){
   document.getElementById("flowModal").classList.remove("open");
+  _editingFlowId = null;
 }
 function setFlowType(type){
   _flowType = type;
@@ -2298,15 +2319,24 @@ async function confirmFlow(){
   if(confirmBtn) confirmBtn.disabled = true;
   const uid = currentUser?.id;
   try {
-    const newFlow = {id:crypto.randomUUID(),user_id:uid,currency,type:_flowType,amount,date,note};
-    const {error} = await sb.from('pool_flows').insert(newFlow);
-    if(error) throw error;
-    poolFlows.push(newFlow);
-    saveToLocalCache(); updateStorageStatus(true);
-    closeFlowModal(); render();
-    showToast(`已記錄${_flowType} ${currency==="TWD"?"NT$ ":"$ "}${amount.toLocaleString()}`);
+    if(_editingFlowId) {
+      const {error} = await sb.from('pool_flows').update({currency,type:_flowType,amount,date,note}).eq('id',_editingFlowId).eq('user_id',uid);
+      if(error) throw error;
+      poolFlows = poolFlows.map(f=>f.id===_editingFlowId ? {...f,currency,type:_flowType,amount,date,note} : f);
+      saveToLocalCache(); updateStorageStatus(true);
+      closeFlowModal(); render(); renderFlowsTab();
+      showToast("已更新資金紀錄");
+    } else {
+      const newFlow = {id:crypto.randomUUID(),user_id:uid,currency,type:_flowType,amount,date,note};
+      const {error} = await sb.from('pool_flows').insert(newFlow);
+      if(error) throw error;
+      poolFlows.push(newFlow);
+      saveToLocalCache(); updateStorageStatus(true);
+      closeFlowModal(); render();
+      showToast(`已記錄${_flowType} ${currency==="TWD"?"NT$ ":"$ "}${amount.toLocaleString()}`);
+    }
   } catch(e){
-    console.warn("pool_flows insert 失敗：",e);
+    console.warn("pool_flows 儲存失敗：",e);
     showToast("儲存失敗，請確認網路連線",true);
   } finally {
     if(confirmBtn) confirmBtn.disabled = false;
@@ -2314,11 +2344,77 @@ async function confirmFlow(){
 }
 
 function switchTab(name){
-  const tabs = ["holdings","history","dividends","performance","settings"];
+  const tabs = ["holdings","history","dividends","flows","performance","settings"];
   document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",tabs[i]===name));
   document.querySelectorAll(".tab-content").forEach(tc=>tc.classList.remove("active"));
   document.getElementById("tab-"+name).classList.add("active");
   if(name === "performance") renderPerformanceChart();
+  if(name === "flows") renderFlowsTab();
+}
+
+function renderFlowsTab() {
+  // Summary
+  const twdIn  = poolFlows.filter(f=>f.currency==="TWD"&&f.type==="入金").reduce((a,f)=>a+f.amount,0);
+  const twdOut = poolFlows.filter(f=>f.currency==="TWD"&&f.type==="出金").reduce((a,f)=>a+f.amount,0);
+  const usdIn  = poolFlows.filter(f=>f.currency==="USD"&&f.type==="入金").reduce((a,f)=>a+f.amount,0);
+  const usdOut = poolFlows.filter(f=>f.currency==="USD"&&f.type==="出金").reduce((a,f)=>a+f.amount,0);
+  document.getElementById("flowsSummaryGrid").innerHTML = `<div class="pool-stats" style="padding:0">
+    <div><div class="pool-stat-label">台股池投入本金 (TWD)</div><div class="pool-stat-value">NT$ ${fmtN(twdIn-twdOut)}</div><div class="pool-stat-sub">入金 ${fmtN(twdIn)}　出金 ${fmtN(twdOut)}</div></div>
+    <div><div class="pool-stat-label">美股池投入本金 (USD)</div><div class="pool-stat-value">$ ${fmtMoney(usdIn-usdOut,"USD")}</div><div class="pool-stat-sub">入金 ${fmtMoney(usdIn,"USD")}　出金 ${fmtMoney(usdOut,"USD")}</div></div>
+    <div><div class="pool-stat-label">總筆數</div><div class="pool-stat-value">${poolFlows.length} 筆</div></div>
+  </div>`;
+
+  // Table
+  const sorted = [...poolFlows].sort((a,b)=>b.date.localeCompare(a.date));
+  let rows = "";
+  sorted.forEach(f => {
+    const isIn = f.type === "入金";
+    const sym = f.currency==="USD" ? "$ " : "NT$ ";
+    const amt = isIn ? sym+fmtMoney(f.amount,f.currency) : "−"+sym+fmtMoney(f.amount,f.currency);
+    rows += `<tr>
+      <td style="padding-left:20px">${f.date}</td>
+      <td><span class="tag">${f.currency}</span></td>
+      <td class="${isIn?"t-pos":"t-neg"} fw-500">${f.type}</td>
+      <td class="${isIn?"t-pos":"t-neg"}">${amt}</td>
+      <td class="t-muted" style="font-size:12px">${f.note||"—"}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openFlowEditModal('${f.id}')">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteFlow('${f.id}')">刪除</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById("flowsBody").innerHTML = rows || `<tr><td colspan="6" class="empty-state">尚無資金紀錄</td></tr>`;
+}
+
+function openFlowEditModal(id) {
+  const f = poolFlows.find(x=>x.id===id);
+  if(!f) return;
+  _editingFlowId = id;
+  _flowType = f.type;
+  setFlowType(f.type);
+  document.getElementById("flow-currency").value = f.currency;
+  document.getElementById("flow-amount-label").textContent = "金額 (" + f.currency + ")";
+  document.getElementById("flow-amount").value = f.amount;
+  document.getElementById("flow-date").value = f.date;
+  document.getElementById("flow-note").value = f.note || "";
+  document.getElementById("flowModalTitle").textContent = "編輯資金紀錄";
+  document.getElementById("flowModal").classList.add("open");
+}
+
+async function deleteFlow(id) {
+  if(!confirm("確定刪除此資金紀錄？")) return;
+  const uid = currentUser?.id;
+  try {
+    const {error} = await sb.from('pool_flows').delete().eq('id',id).eq('user_id',uid);
+    if(error) throw error;
+    poolFlows = poolFlows.filter(f=>f.id!==id);
+    saveToLocalCache(); updateStorageStatus(true);
+    render(); renderFlowsTab();
+    showToast("已刪除");
+  } catch(e) {
+    console.warn("deleteFlow 失敗：",e);
+    showToast("刪除失敗，請確認網路連線",true);
+  }
 }
 
 // ══════════════════════════════════════════════════════
