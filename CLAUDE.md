@@ -4,6 +4,11 @@
 
 每個任務完成後，工作細節與踩坑記錄存放於 `docs/Tx-summary.md`。開始新任務前，**Code 和 Cowork 都應先閱讀相關的 summary**，從過去的經驗中學習，避免重複踩雷。
 
+## 開工前必讀
+
+1. 當前任務 spec：`docs/Tx-spec.md`
+2. 如有相依任務，閱讀對應的 `docs/Tx-summary.md`
+
 ---
 
 ## 專案概述
