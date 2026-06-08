@@ -1314,7 +1314,7 @@ function syncToolbar(){
   }
   if(sel.type==='group'){
     const g=groups().find(x=>x.ticker===sel.ticker);
-    pp.disabled=false; pe.disabled=false; pd.disabled=false; ps.disabled=true; px.disabled=false;
+    pp.disabled=false; pe.disabled=false; pd.disabled=false; ps.disabled=false; px.disabled=false;
     pe.textContent="加碼";
     st.className="active"; st.textContent=`已選取：${g?.name||sel.ticker}（${g?.batches.length||0}批）`;
   } else {
@@ -1375,8 +1375,14 @@ function toolbarDividend(){
   openDividendModal(sel.ticker);
 }
 function toolbarSell(){
-  if(!sel||sel.type!=='batch') return;
-  openSellModal(sel.batchId);
+  if(!sel) return;
+  if(sel.type==='batch'){
+    openSellModal(sel.batchId);
+  } else {
+    const g=groups().find(x=>x.ticker===sel.ticker); if(!g) return;
+    const oldest=[...g.batches].sort((a,b)=>a.buyDate.localeCompare(b.buyDate))[0];
+    if(oldest) openSellModal(oldest.id);
+  }
 }
 async function toolbarDelete(){
   if(!sel) return;
@@ -1784,7 +1790,7 @@ function renderTable(){
       <td><span class="t-muted">${g.ap.toFixed(1)}%</span><div class="meter-bar" style="margin-top:2px"><div class="meter-fill" style="width:${aw}%"></div></div><div class="cell-sub">${fmtAnnualized(g.ann, Math.round(g.wd))}</div></td>
       <td><span class="tag-status" style="background:${si.bg};color:${si.color};border:1px solid ${si.border};padding:2px 10px;border-radius:99px;font-size:11px">${si.label}</span></td>
     </tr>`;
-    if(isOpen) g.batches.forEach(b=>{
+    if(isOpen) [...g.batches].sort((a,b)=>a.buyDate.localeCompare(b.buyDate)).forEach(b=>{
       const bFee = b.buyFee || 0;
       const bc=b.shares*b.costPerShare + bFee;
       const bv=b.shares*b.currentPrice;
