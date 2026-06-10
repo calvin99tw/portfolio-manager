@@ -892,6 +892,8 @@ function showOtpMsg(msg, isError) {
 
 async function signOut() {
   await sb.auth.signOut();
+  // 共用電腦情境：登出時清除本機財務資料快取
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 // Enter 鍵快捷：Step 1 送出驗證碼，Step 2 確認登入
@@ -1204,6 +1206,10 @@ const fmtN   = n => new Intl.NumberFormat("zh-TW",{maximumFractionDigits:0}).for
 const fmtN2  = n => new Intl.NumberFormat("zh-TW",{minimumFractionDigits:2,maximumFractionDigits:2}).format(_safe(n));
 const fmtCur = (n,cur) => (cur==="USD"?"$ ":"NT$ ")+fmtMoney(n,cur);
 const fmtPct = n => (n>=0?"+":"")+n.toFixed(2)+"%";
+// XSS 防護：自由文字欄位（name/ticker/note）進 innerHTML 前必須跳脫
+const esc   = s => String(s??"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// 插入 onclick 等 inline JS 字串時用：先跳脫 JS 字面值，再過 esc() 防 HTML 屬性逃逸
+const escJs = s => String(s??"").replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/</g,'\\x3c');
 const getRate= () => parseFloat(document.getElementById("usdRate")?.value)||32;
 const toTWD  = (a,c) => c==="USD"?a*getRate():a;
 const dFrom  = d => Math.max(1,Math.floor((Date.now()-new Date(d))/86400000));
@@ -1610,10 +1616,10 @@ function render(){
     })).sort((a,b) => b.pct - a.pct);
     const idlePct = totalAssets>0 ? Math.max(0, idle/totalAssets*100) : 0;
     const segHTML = segs.map(s =>
-      `<div style="width:${s.pct}%;background:${s.color};height:100%;border-right:1px solid var(--bg);box-sizing:border-box;transition:width 0.5s" title="${s.g.name}: ${s.pct.toFixed(1)}% / ${symbol}${fmtMoney(s.amount,currency)}"></div>`
+      `<div style="width:${s.pct}%;background:${s.color};height:100%;border-right:1px solid var(--bg);box-sizing:border-box;transition:width 0.5s" title="${esc(s.g.name)}: ${s.pct.toFixed(1)}% / ${symbol}${fmtMoney(s.amount,currency)}"></div>`
     ).join("") + (idlePct>0 ? `<div style="width:${idlePct}%;background:var(--bg-elev-3);height:100%;border-left:${segs.length?'1px solid var(--bg)':'none'};box-sizing:border-box" title="可用餘額: ${idlePct.toFixed(1)}%"></div>` : "");
     const legendHTML = segs.map(s =>
-      `<span class="alloc-legend-item"><span class="dot" style="background:${s.color}"></span><span style="color:var(--text-1)">${s.g.name}</span> <span style="color:var(--text-3)">${s.pct.toFixed(1)}%</span> <span style="color:var(--text-4);font-size:10px">(${symbol}${fmtMoney(s.amount,currency)})</span></span>`
+      `<span class="alloc-legend-item"><span class="dot" style="background:${s.color}"></span><span style="color:var(--text-1)">${esc(s.g.name)}</span> <span style="color:var(--text-3)">${s.pct.toFixed(1)}%</span> <span style="color:var(--text-4);font-size:10px">(${symbol}${fmtMoney(s.amount,currency)})</span></span>`
     ).join("") + `<span class="alloc-legend-item"><span class="dot" style="background:var(--bg-elev-3);border:1px solid var(--border-strong)"></span><span style="color:var(--text-3)">可用餘額</span> <span style="color:var(--text-3)">${idlePct.toFixed(1)}%</span></span>`;
     return `<div class="alloc-bar" style="margin:12px 0 6px">${segHTML}</div><div class="alloc-legend">${legendHTML}</div>`;
   }
@@ -1696,8 +1702,8 @@ function render(){
   // ── Alerts ──
   const hot=gs.filter(g=>g.pct>=hotT), ov=gs.filter(g=>g.pct<=ovT);
   document.getElementById("alertsDiv").innerHTML=(hot.length||ov.length)?`<div class="alerts-grid">
-    ${hot.length?`<div class="alert-card" style="background:var(--pos-bg);border:1px solid var(--pos-border)"><span style="font-size:18px">🔥</span><div><div style="font-size:12px;font-weight:500;color:var(--pos);margin-bottom:4px">過熱（≥${hotT}%）</div>${hot.map(g=>`<div style="font-size:11px;color:var(--pos-dim);margin-top:2px">${g.name} ${fmtPct(g.pct)} — 考慮減碼</div>`).join("")}</div></div>`:""}
-    ${ov.length?`<div class="alert-card" style="background:var(--neg-bg);border:1px solid var(--neg-border)"><span style="font-size:18px">📉</span><div><div style="font-size:12px;font-weight:500;color:var(--neg);margin-bottom:4px">超賣（≤${ovT}%）</div>${ov.map(g=>`<div style="font-size:11px;color:var(--neg-dim);margin-top:2px">${g.name} ${fmtPct(g.pct)} — 考慮加碼</div>`).join("")}</div></div>`:""}
+    ${hot.length?`<div class="alert-card" style="background:var(--pos-bg);border:1px solid var(--pos-border)"><span style="font-size:18px">🔥</span><div><div style="font-size:12px;font-weight:500;color:var(--pos);margin-bottom:4px">過熱（≥${hotT}%）</div>${hot.map(g=>`<div style="font-size:11px;color:var(--pos-dim);margin-top:2px">${esc(g.name)} ${fmtPct(g.pct)} — 考慮減碼</div>`).join("")}</div></div>`:""}
+    ${ov.length?`<div class="alert-card" style="background:var(--neg-bg);border:1px solid var(--neg-border)"><span style="font-size:18px">📉</span><div><div style="font-size:12px;font-weight:500;color:var(--neg);margin-bottom:4px">超賣（≤${ovT}%）</div>${ov.map(g=>`<div style="font-size:11px;color:var(--neg-dim);margin-top:2px">${esc(g.name)} ${fmtPct(g.pct)} — 考慮加碼</div>`).join("")}</div></div>`:""}
   </div>`:"";
 
   renderTable();
@@ -1722,7 +1728,7 @@ function render(){
     const sellNet = s.shares*s.sellPrice - (s.sellFee||0) - (s.sellTax||0);
     const realAnn = buyTotalCost>0 && s.holdDays>0 ? (Math.pow(sellNet/buyTotalCost, 365/s.holdDays)-1)*100 : 0;
     hr+=`<tr class="history-row">
-      <td style="padding-left:20px"><div class="fw-500">${s.name}</div><div style="font-size:11px;color:var(--text-4)">${s.ticker}</div></td>
+      <td style="padding-left:20px"><div class="fw-500">${esc(s.name)}</div><div style="font-size:11px;color:var(--text-4)">${esc(s.ticker)}</div></td>
       <td><span class="tag">${s.currency}</span></td>
       <td>${fmtShares(s.shares,s.currency)}</td><td class="t-muted">${fmtPrice(s.costPerShare,s.currency)}</td>
       <td>${fmtPrice(s.sellPrice,s.currency)}<div class="cell-sub">${fmtCur(sellNet,s.currency)}</div></td>
@@ -1751,14 +1757,14 @@ function render(){
   let dr="";
   [...dividends].reverse().forEach(d=>{
     dr+=`<tr class="history-row">
-      <td style="padding-left:20px"><div class="fw-500">${d.name}</div><div style="font-size:11px;color:var(--text-4)">${d.ticker}</div></td>
+      <td style="padding-left:20px"><div class="fw-500">${esc(d.name)}</div><div style="font-size:11px;color:var(--text-4)">${esc(d.ticker)}</div></td>
       <td><span class="tag">${d.currency}</span></td>
       <td>${fmtPrice(d.perShare,d.currency)}</td>
       <td>${fmtShares(d.shares,d.currency)}</td>
       <td class="t-muted">${fmtCur(d.grossAmount,d.currency)}</td>
       <td class="fw-500">${fmtCur(d.netAmount,d.currency)}</td>
       <td class="t-muted">${d.exDate}</td>
-      <td class="t-muted" style="font-size:11px">${d.note||"-"}</td>
+      <td class="t-muted" style="font-size:11px">${esc(d.note||"-")}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openDividendEditModal('${d.id}')">編輯</button>
         <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteDividend('${d.id}')">刪除</button>
@@ -1778,12 +1784,12 @@ function renderTable(){
     const aw=Math.min(g.ap*2,100);
     const isOpen=expanded.has(g.ticker);
     const gsel=sel?.type==='group'&&sel.ticker===g.ticker;
-    rows+=`<tr class="group-row${gsel?' selected':''}" onclick="pickGroup('${g.ticker}',event)">
-      <td><i class="chevron${isOpen?' open':''}" onclick="toggleExpand('${g.ticker}',event)">▶</i><span class="fw-500">${g.name}</span><div style="font-size:11px;color:var(--text-4);margin-left:22px">${g.ticker} · ${g.batches.length}批</div></td>
+    rows+=`<tr class="group-row${gsel?' selected':''}" onclick="pickGroup('${esc(escJs(g.ticker))}',event)">
+      <td><i class="chevron${isOpen?' open':''}" onclick="toggleExpand('${esc(escJs(g.ticker))}',event)">▶</i><span class="fw-500">${esc(g.name)}</span><div style="font-size:11px;color:var(--text-4);margin-left:22px">${esc(g.ticker)} · ${g.batches.length}批</div></td>
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
       <td class="t-muted">${fmtPrice(g.ac,g.currency)}<div class="cell-sub">${fmtCur(g.tc,g.currency)}</div></td>
-      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-accent':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:12px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${g.ticker}',${g.currentPrice})">⚠</span>`:""}<div class="cell-sub">${fmtCur(g.tv,g.currency)}</div></td>
+      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-accent':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:12px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${esc(escJs(g.ticker))}',${g.currentPrice})">⚠</span>`:""}<div class="cell-sub">${fmtCur(g.tv,g.currency)}</div></td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
       <td><span class="${pnlClass(g.pct)} fw-500">${fmtPct(g.pct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${mw}%;background:${si.color}"></div></div></td>
       <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}<div class="${pnlClass(g.ret)} fw-500 cell-sub-colored">${fmtCur(g.ret,g.currency)}</div></td>
@@ -1803,7 +1809,7 @@ function renderTable(){
       const bsi=statusInfo(bpct);
       const bsel=sel?.type==='batch'&&sel.batchId===b.id;
       const feeNote = bFee>0 ? ` (含手續費 ${fmtMoney(bFee,g.currency)})` : '';
-      rows+=`<tr class="batch-row${bsel?' selected':''}" onclick="pickBatch('${b.id}','${g.ticker}',event)">
+      rows+=`<tr class="batch-row${bsel?' selected':''}" onclick="pickBatch('${b.id}','${esc(escJs(g.ticker))}',event)">
         <td class="t-muted" style="font-size:12px">└ 批次 ${b.buyDate}${feeNote}</td>
         <td></td>
         <td class="t-muted" style="font-size:12px">${fmtShares(b.shares,g.currency)}</td>
@@ -2382,7 +2388,7 @@ function renderFlowsTab() {
       <td><span class="tag">${f.currency}</span></td>
       <td class="${isIn?"t-pos":"t-neg"} fw-500">${f.type}</td>
       <td class="${isIn?"t-pos":"t-neg"}">${amt}</td>
-      <td class="t-muted" style="font-size:12px">${f.note||"—"}</td>
+      <td class="t-muted" style="font-size:12px">${esc(f.note||"—")}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openFlowEditModal('${f.id}')">編輯</button>
         <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteFlow('${f.id}')">刪除</button>
