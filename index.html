@@ -2441,6 +2441,8 @@ function exportCSV(){
   sells.forEach(s=>csv+=`${s.id},${s.name},${s.ticker},${s.currency},${s.shares},${s.costPerShare},${s.sellPrice},${(s.buyFee||0).toFixed(2)},${(s.sellFee||0).toFixed(2)},${(s.sellTax||0).toFixed(2)},${s.buyDate},${s.sellDate},${s.holdDays},${s.realizedPnL.toFixed(2)}\n`);
   csv+="\n[DIVIDENDS]\nid,name,ticker,currency,perShare,shares,grossAmount,netAmount,exDate,note\n";
   dividends.forEach(d=>csv+=`${d.id},${d.name},${d.ticker},${d.currency},${d.perShare},${d.shares},${d.grossAmount.toFixed(2)},${d.netAmount.toFixed(2)},${d.exDate},${(d.note||"").replace(/,/g,";")}\n`);
+  csv+="\n[POOL_FLOWS]\nid,currency,type,amount,date,note\n";
+  poolFlows.forEach(f=>csv+=`${f.id},${f.currency},${f.type},${f.amount.toFixed(2)},${f.date},${(f.note||"").replace(/,/g,";")}\n`);
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"}));
   const today=new Date().toISOString().slice(0,10);
@@ -2455,16 +2457,18 @@ document.getElementById("csvImport").addEventListener("change",function(e){
   r.onload=async ev=>{
     const text = ev.target.result.replace(/^﻿/, "");
     const lines=text.split("\n").map(l=>l.trim()).filter(Boolean);
-    let mode=""; const nb=[],ns=[],nd=[];
+    let mode=""; const nb=[],ns=[],nd=[],nf=[];
     let np={twd:null,usd:null,rate:null};
     for(const line of lines){
       if(line==="[POOLS]"){mode="pools";continue;}
       if(line==="[BUYS]"){mode="buys";continue;}
       if(line==="[SELLS]"){mode="sells";continue;}
       if(line==="[DIVIDENDS]"){mode="divs";continue;}
+      if(line==="[POOL_FLOWS]"){mode="flows";continue;}
       if(line.startsWith("id,")||line.startsWith("poolTWD,")) continue;
       const p=line.split(",");
       if(mode==="pools"&&p.length>=3){ np.twd=+p[0]; np.usd=+p[1]; np.rate=+p[2]; }
+      else if(mode==="flows"&&p.length>=5) nf.push({id:p[0],currency:p[1],type:p[2],amount:+p[3],date:p[4],note:p[5]||""});
       else if(mode==="buys"){
         if(p.length>=9) nb.push({id:+p[0],name:p[1],ticker:p[2],currency:p[3],shares:+p[4],costPerShare:+p[5],buyFee:+p[6]||0,currentPrice:+p[7],buyDate:p[8]});
         else if(p.length>=8) nb.push({id:+p[0],name:p[1],ticker:p[2],currency:p[3],shares:+p[4],costPerShare:+p[5],buyFee:0,currentPrice:+p[6],buyDate:p[7]});
@@ -2484,19 +2488,22 @@ document.getElementById("csvImport").addEventListener("change",function(e){
     const nb2=nb.map(b=>({...b,id:crypto.randomUUID(),user_id:uid}));
     const ns2=ns.map(s=>({...s,id:crypto.randomUUID(),user_id:uid}));
     const nd2=nd.map(d=>({...d,id:crypto.randomUUID(),user_id:uid}));
-    buys=nb2; sells=ns2; dividends=nd2; sel=null;
+    const nf2=nf.map(f=>({...f,user_id:uid}));
+    buys=nb2; sells=ns2; dividends=nd2; poolFlows=nf2; sel=null;
     saveToLocalCache(); // 立刻存快取，不等 Supabase
     syncToolbar(); render();
-    showToast(`已載入：${nb.length} 持倉、${ns.length} 賣出、${nd.length} 股息，同步中…`);
+    showToast(`已載入：${nb.length} 持倉、${ns.length} 賣出、${nd.length} 股息、${nf.length} 資金流動，同步中…`);
     try {
       await Promise.all([
         sb.from('buys').delete().eq('user_id',uid),
         sb.from('sells').delete().eq('user_id',uid),
         sb.from('dividends').delete().eq('user_id',uid),
+        sb.from('pool_flows').delete().eq('user_id',uid),
       ]);
       if(nb2.length) await sb.from('buys').insert(nb2);
       if(ns2.length) await sb.from('sells').insert(ns2);
       if(nd2.length) await sb.from('dividends').insert(nd2);
+      if(nf2.length) await sb.from('pool_flows').insert(nf2);
       await upsertPools();
       saveToLocalCache();
       updateStorageStatus(true);
