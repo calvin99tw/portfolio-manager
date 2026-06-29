@@ -522,7 +522,7 @@ h1, .heading { color: var(--text-1); }
       <div style="font-size:11px;color:var(--text-4);margin-top:14px;line-height:1.7">
         ※ 投入本金由「入金 / 出金」紀錄加總，請在持倉頁工具列點「入金 / 出金」記錄資金進出<br>
         ※ 匯率僅用於「合併檢視」模式下將美股部位換算為 TWD，原幣別資料不會被改動<br>
-        ※ 股價來源：TWSE OpenAPI（台股收盤價，每日 15:00 後更新）；匯率來源：中央銀行 CBC（每日更新）<br>
+        ※ 股價來源：Yahoo Finance（台股 + 美股，盤中約延遲 15–20 分，收盤價準確）；匯率來源：中央銀行 CBC（每日更新）<br>
         ※ 行情於啟動與切回頁面時自動抓取，可點 Header 的 ↻ 手動更新
       </div>
     </div>
@@ -1439,62 +1439,52 @@ async function fetchMarketData(manual = false) {
   let usdStockSuccess = false;
   let rateSuccess = false;
   let stockDate = "";  // 收盤價日期，格式 MM/DD
+  let twMarketState = "";  // 台股盤別：REGULAR=盤中，其餘=收盤
   const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
   const newFailed = new Set(); // 本次抓取失敗的 ticker
 
-  // ── 1. 台股收盤價（優先用官網盤後資料，fallback 用 OpenAPI）──
+  // ── 1. 台股股價（Yahoo Finance v8，.TW → .TWO fallback，並行）──
   try {
-    const today = new Date().toISOString().slice(0,10).replace(/-/g,"");
-    let priceMap = {};
-
-    // 先試官網盤後端點（當日資料，更新較快）
-    try {
-      const res = await fetch(`${TWSE_PROXY}/rwd/zh/afterTrading/STOCK_DAY_ALL?date=${today}&response=json`);
-      if(res.ok) {
-        const json = await res.json();
-        if(json.stat === "OK" && json.data?.length) {
-          // fields: [證券代號, 證券名稱, 成交股數, 成交金額, 開盤價, 最高價, 最低價, 收盤價, ...]
-          // 收盤價在 index 7
-          stockDate = `${json.date.slice(4,6)}/${json.date.slice(6,8)}`;
-          json.data.forEach(row => {
-            const price = parseFloat(row[7].replace(/,/g,""));
-            if(!isNaN(price) && price > 0) priceMap[row[0]] = price;
-          });
-        }
-      }
-    } catch(e) {}
-
-    // 若今日資料尚未發布，fallback 到 OpenAPI（前一交易日收盤價）
-    if(Object.keys(priceMap).length === 0) {
-      const res = await fetch(`${TWSE_PROXY}/v1/exchangeReport/STOCK_DAY_ALL`);
-      if(res.ok) {
-        const data = await res.json();
-        if(data[0]?.Date?.length === 7) {
-          stockDate = `${data[0].Date.slice(3,5)}/${data[0].Date.slice(5,7)}`;
-        }
-        data.forEach(row => {
-          if(row.Code && row.ClosingPrice) {
-            const price = parseFloat(row.ClosingPrice.replace(/,/g,""));
-            if(!isNaN(price) && price > 0) priceMap[row.Code] = price;
-          }
-        });
-      }
-    }
-
-    // 更新持股現價
     const twdTickers = [...new Set(buys.filter(b => b.currency === "TWD").map(b => b.ticker))];
-    const uid = currentUser?.id;
-    for(const ticker of twdTickers) {
-      const newPrice = priceMap[ticker];
-      if(newPrice === undefined) { newFailed.add(ticker); continue; }
-      buys.forEach(b => { if(b.ticker === ticker && b.currency === "TWD") b.currentPrice = newPrice; });
-      if(uid) {
-        try {
-          await sb.from('buys').update({ currentPrice: newPrice }).eq('ticker', ticker).eq('user_id', uid);
-        } catch(e) { console.warn(`buys 更新現價失敗 (${ticker}):`, e); }
+    if(twdTickers.length === 0) {
+      stockSuccess = true;
+    } else {
+      const uid = currentUser?.id;
+      const results = await Promise.all(twdTickers.map(async ticker => {
+        // 先試 .TW（上市），無有效價格再試 .TWO（上櫃）
+        for(const suffix of [".TW", ".TWO"]) {
+          try {
+            const res = await fetch(`${TWSE_PROXY}/yahoo/v8/finance/chart/${ticker}${suffix}?interval=1d&range=1d`);
+            if(!res.ok) continue;
+            const data = await res.json();
+            const meta = data?.chart?.result?.[0]?.meta;
+            const price = meta?.regularMarketPrice;
+            if(typeof price !== "number" || price <= 0) continue;
+            return { ticker, price, time: meta.regularMarketTime, state: meta.marketState };
+          } catch(e) { /* 試下一個 suffix */ }
+        }
+        return null;
+      }));
+      let anySuccess = false;
+      twdTickers.forEach((ticker, i) => { if(!results[i]) newFailed.add(ticker); });
+      for(const r of results) {
+        if(!r) continue;
+        buys.forEach(b => { if(b.ticker === r.ticker && b.currency === "TWD") b.currentPrice = r.price; });
+        if(uid) {
+          try {
+            await sb.from('buys').update({ currentPrice: r.price }).eq('ticker', r.ticker).eq('user_id', uid);
+          } catch(e) { console.warn(`buys 更新現價失敗 (${r.ticker}):`, e); }
+        }
+        // 收盤日期 / 盤別：取第一筆成功的代表值
+        if(!stockDate && r.time) {
+          const d = new Date(r.time * 1000);
+          stockDate = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+          twMarketState = r.state || "";
+        }
+        anySuccess = true;
       }
+      if(anySuccess) stockSuccess = true;
     }
-    if(Object.keys(priceMap).length > 0) stockSuccess = true;
   } catch(e) {
     console.warn("台股股價抓取失敗：", e);
   }
@@ -1578,7 +1568,8 @@ async function fetchMarketData(manual = false) {
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
   if(stockSuccess || usdStockSuccess || rateSuccess) {
     saveSnapshot();
-    const dateLabel = stockDate ? `收盤 ${stockDate} · ` : "";
+    const phase = (twMarketState === "REGULAR") ? "盤中" : "收盤";
+    const dateLabel = stockDate ? `${phase} ${stockDate} · ` : "";
     updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
     if(manual) {
       if(newFailed.size > 0) {
