@@ -1781,7 +1781,7 @@ function renderTable(){
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
       <td class="t-muted">${fmtPrice(g.ac,g.currency)}<div class="cell-sub">${fmtCur(g.tc,g.currency)}</div></td>
-      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-warn':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:13px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${esc(escJs(g.ticker))}',${g.currentPrice})">⚠</span>`:""}<div class="cell-sub">${fmtCur(g.tv,g.currency)}</div></td>
+      <td class="fw-500${failedAutoFetch.has(g.ticker)?' t-warn':''}">${fmtPrice(g.currentPrice,g.currency)}${failedAutoFetch.has(g.ticker)?` <span style="font-size:15px;cursor:pointer" title="自動抓價失敗，點擊更新現價" onclick="event.stopPropagation();openPriceModal('${esc(escJs(g.ticker))}',${g.currentPrice})">⚠</span>`:""}<div class="cell-sub">${fmtCur(g.tv,g.currency)}</div></td>
       <td class="${pnlClass(g.pnl)}">${fmtCur(g.pnl,g.currency)}</td>
       <td><span class="${pnlClass(g.pct)} fw-500">${fmtPct(g.pct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${mw}%;background:${si.color}"></div></div></td>
       <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}<div class="${pnlClass(g.ret)} fw-500 cell-sub-colored">${fmtCur(g.ret,g.currency)}</div></td>
