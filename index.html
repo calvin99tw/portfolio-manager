@@ -2106,6 +2106,11 @@ async function confirmSell(){
   if(new Date(sd) > new Date(today)){
     if(!confirm("賣出日晚於今天，確定要儲存？")) return;
   }
+  if(!editSellId) {
+    const b=buys.find(x=>x.id===sellTargetId);
+    const dup = b && sells.find(s=>s.ticker===b.ticker&&s.sellDate===sd&&Math.abs(s.shares-ss)<0.0001&&Math.abs(s.sellPrice-sp)<0.005);
+    if(dup && !confirm(`已有相同標的與賣出日（${sd}）、股數與價格相近的賣出紀錄，確定要新增？`)) return;
+  }
 
   const confirmBtn = document.getElementById("s-confirm-btn");
   if(confirmBtn) confirmBtn.disabled = true;
@@ -2243,6 +2248,10 @@ async function confirmDividend(){
   const note=document.getElementById("d-note").value.trim();
   if(isNaN(perShare)||isNaN(shares)||isNaN(net)||!exDate){showToast("請填寫必填欄位",true);return;}
   const grossAmount = perShare*shares;
+  if(!editDividendId) {
+    const dup = dividends.find(d=>d.ticker===divTargetTicker&&d.exDate===exDate&&Math.abs(d.netAmount-net)<0.005);
+    if(dup && !confirm(`已有相同標的與除息日（${exDate}）、金額相近的股息紀錄，確定要新增？`)) return;
+  }
   const confirmBtn = document.getElementById("div-confirm-btn");
   if(confirmBtn) confirmBtn.disabled = true;
   const uid=currentUser?.id;
