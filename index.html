@@ -1709,7 +1709,7 @@ function render(){
     <div><div class="pool-stat-label">虧損筆數</div><div class="pool-stat-value">${sells.length-rWin} 筆</div><div class="pool-stat-sub">已平倉</div></div>
   </div>`;
   let hr="";
-  [...sells].reverse().forEach(s=>{
+  [...sells].sort((a,b)=>b.sellDate.localeCompare(a.sellDate)).forEach(s=>{
     const c=pnlClass(s.realizedPnL);
     const fees = (s.buyFee||0) + (s.sellFee||0) + (s.sellTax||0);
     const feeTitle = fees>0
@@ -1747,7 +1747,7 @@ function render(){
     <div><div class="pool-stat-label">美股股息</div><div class="pool-stat-value ${usdPool.dividendsTotal!==0?pnlClass(usdPool.dividendsTotal):''}">$ ${fmtMoney(usdPool.dividendsTotal,"USD")}</div><div class="pool-stat-sub">${divCountUSD} 筆</div></div>
   </div>`;
   let dr="";
-  [...dividends].reverse().forEach(d=>{
+  [...dividends].sort((a,b)=>b.exDate.localeCompare(a.exDate)).forEach(d=>{
     dr+=`<tr class="history-row">
       <td style="padding-left:20px"><div class="fw-500">${esc(d.name)}</div><div style="font-size:11px;color:var(--text-4)">${esc(d.ticker)}</div></td>
       <td><span class="tag">${d.currency}</span></td>
