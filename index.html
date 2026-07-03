@@ -1432,6 +1432,19 @@ function updateMarketStatus(text, color) {
   if(el) { el.textContent = text; el.style.color = color || "var(--text-3)"; }
 }
 
+// Yahoo v8 chart API 不會回傳 marketState 欄位（台股/美股皆然），
+// 改用台北當地時間直接判斷是否為台股交易時段（平日 09:00–13:30）
+function isTwTradingHours() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Taipei", hour12: false, weekday: "short", hour: "2-digit", minute: "2-digit"
+  }).formatToParts(new Date());
+  const get = t => parts.find(p => p.type === t)?.value;
+  const weekday = get("weekday");
+  const hm = parseInt(get("hour")) + parseInt(get("minute")) / 60;
+  const isWeekday = !["Sat", "Sun"].includes(weekday);
+  return isWeekday && hm >= 9 && hm < 13.5;
+}
+
 async function fetchMarketData(manual = false) {
   if(!navigator.onLine) return;
   updateMarketStatus("行情更新中…", "var(--text-3)");
@@ -1440,7 +1453,6 @@ async function fetchMarketData(manual = false) {
   let usdStockSuccess = false;
   let rateSuccess = false;
   let stockDate = "";  // 收盤價日期，格式 MM/DD
-  let twMarketState = "";  // 台股盤別：REGULAR=盤中，其餘=收盤
   const TWSE_PROXY = "https://raspy-cherry-f806.calvin99-tw.workers.dev";
   const newFailed = new Set(); // 本次抓取失敗的 ticker
 
@@ -1461,7 +1473,7 @@ async function fetchMarketData(manual = false) {
             const meta = data?.chart?.result?.[0]?.meta;
             const price = meta?.regularMarketPrice;
             if(typeof price !== "number" || price <= 0) continue;
-            return { ticker, price, time: meta.regularMarketTime, state: meta.marketState };
+            return { ticker, price, time: meta.regularMarketTime };
           } catch(e) { /* 試下一個 suffix */ }
         }
         return null;
@@ -1476,11 +1488,10 @@ async function fetchMarketData(manual = false) {
             await sb.from('buys').update({ currentPrice: r.price }).eq('ticker', r.ticker).eq('user_id', uid);
           } catch(e) { console.warn(`buys 更新現價失敗 (${r.ticker}):`, e); }
         }
-        // 收盤日期 / 盤別：取第一筆成功的代表值
+        // 收盤日期：取第一筆成功的代表值
         if(!stockDate && r.time) {
           const d = new Date(r.time * 1000);
           stockDate = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-          twMarketState = r.state || "";
         }
         anySuccess = true;
       }
@@ -1569,7 +1580,7 @@ async function fetchMarketData(manual = false) {
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
   if(stockSuccess || usdStockSuccess || rateSuccess) {
     saveSnapshot();
-    const phase = (twMarketState === "REGULAR") ? "盤中" : "收盤";
+    const phase = isTwTradingHours() ? "盤中" : "收盤";
     const dateLabel = stockDate ? `${phase} ${stockDate} · ` : "";
     updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
     if(manual) {
