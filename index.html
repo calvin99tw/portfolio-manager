@@ -1432,19 +1432,6 @@ function updateMarketStatus(text, color) {
   if(el) { el.textContent = text; el.style.color = color || "var(--text-3)"; }
 }
 
-// Yahoo v8 chart API 不會回傳 marketState 欄位（台股/美股皆然），
-// 改用台北當地時間直接判斷是否為台股交易時段（平日 09:00–13:30）
-function isTwTradingHours() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Taipei", hour12: false, weekday: "short", hour: "2-digit", minute: "2-digit"
-  }).formatToParts(new Date());
-  const get = t => parts.find(p => p.type === t)?.value;
-  const weekday = get("weekday");
-  const hm = parseInt(get("hour")) + parseInt(get("minute")) / 60;
-  const isWeekday = !["Sat", "Sun"].includes(weekday);
-  return isWeekday && hm >= 9 && hm < 13.5;
-}
-
 async function fetchMarketData(manual = false) {
   if(!navigator.onLine) return;
   updateMarketStatus("行情更新中…", "var(--text-3)");
@@ -1580,8 +1567,7 @@ async function fetchMarketData(manual = false) {
   const time = now.toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false});
   if(stockSuccess || usdStockSuccess || rateSuccess) {
     saveSnapshot();
-    const phase = isTwTradingHours() ? "盤中" : "收盤";
-    const dateLabel = stockDate ? `${phase} ${stockDate} · ` : "";
+    const dateLabel = stockDate ? `行情 ${stockDate} · ` : "";
     updateMarketStatus(`${dateLabel}抓取於 ${time}`, "var(--neg)");
     if(manual) {
       if(newFailed.size > 0) {
