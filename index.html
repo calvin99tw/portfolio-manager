@@ -2506,15 +2506,22 @@ async function fetchDashboardPrices() {
   _dashFetchedAt = Date.now();
   const syms = [...new Set(dashboardData.tickers.map(t => t.yahooSymbol).filter(Boolean))];
   await Promise.all(syms.map(async sym => {
-    try {
-      const res = await fetch(`${YAHOO_PROXY}/yahoo/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`);
-      if(!res.ok) return;
-      const data = await res.json();
-      const meta = data?.chart?.result?.[0]?.meta;
-      const price = meta?.regularMarketPrice;
-      if(typeof price !== "number" || price <= 0) return;
-      _dashPrices[sym] = { price, prevClose: meta.chartPreviousClose, volume: meta.regularMarketVolume, time: meta.regularMarketTime };
-    } catch(e) { /* 抓不到就留待更新狀態 */ }
+    // 台股後綴容錯：.TWO 抓不到試 .TW，反之亦然（JSON 標錯市場別時仍可取價）
+    const candidates = [sym];
+    if(sym.endsWith(".TWO")) candidates.push(sym.slice(0, -1));           // .TWO → .TW
+    else if(sym.endsWith(".TW")) candidates.push(sym + "O");              // .TW → .TWO
+    for(const c of candidates) {
+      try {
+        const res = await fetch(`${YAHOO_PROXY}/yahoo/v8/finance/chart/${encodeURIComponent(c)}?interval=1d&range=1d`);
+        if(!res.ok) continue;
+        const data = await res.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        const price = meta?.regularMarketPrice;
+        if(typeof price !== "number" || price <= 0) continue;
+        _dashPrices[sym] = { price, prevClose: meta.chartPreviousClose, volume: meta.regularMarketVolume, time: meta.regularMarketTime };
+        return;
+      } catch(e) { /* 試下一個候選 */ }
+    }
   }));
   return true;
 }
