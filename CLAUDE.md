@@ -45,6 +45,7 @@ dividends   → id, name, ticker, currency, perShare, shares, grossAmount, netAm
 snapshots   → id, user_id, date, twd_value, usd_value, twd_cost, usd_cost, usd_rate, twd_net_deposit, usd_net_deposit（unique: user_id+date）
 pool_flows  → id, user_id, currency, type(入金/出金), amount, date, note（T9 新增）
 dashboard   → user_id(PK), payload(jsonb), imported_at（T12 新增；dashboard.json 契約 v1 交付管道，單列覆蓋式）
+push_subscriptions → id, user_id, endpoint(unique), p256dh, auth, created_at（T13 新增；Web Push 訂閱，Worker 以 service_role 讀取）
 ```
 
 ---
@@ -73,6 +74,7 @@ dashboard   → user_id(PK), payload(jsonb), imported_at（T12 新增；dashboar
 | T10 | 資金明細 Tab | ✅ 完成 | 列出 pool_flows 紀錄，支援編輯與刪除，詳見 docs/T10-summary.md |
 | T11 | 台股股價改用 Yahoo | ✅ 完成 | 修正 TWSE rwd 端點改回 CSV 導致的收盤價靜默失效；台股改走 Yahoo（`.TW`/`.TWO`），支援盤中取價，詳見 docs/T11-summary.md |
 | T12 | 看板 Tab | ✅ 完成 | dashboard.json 契約 v1 階段②：Supabase dashboard 表 + 設定頁匯入 + 看板頁（距行動價%、貼線/跨線/催化劑、附錄 A 呈現），詳見 docs/T12-summary.md |
+| T13 | 看板推播 | ✅ infra 完成 | 契約階段③：Worker cron 收盤掃描 + Web Push（RFC 8291/8292 全自建）+ PWA/訂閱管理；催化劑推播已上線，價格推播藏於 `PRICE_PUSH_ENABLED` flag 待雙軌驗證後撥開，詳見 docs/T13-summary.md |
 
 **Bugfix**：可用餘額對帳失準（美股+台股）（2026-07）— NVDA 重複股息、台達電分批賣出手續費攤分錯誤；修正交易/股息歷史排序（改真正 sort by date）、新增送出前重複檢查，詳見 docs/bugfix-2026-07-可用餘額對帳與重複資料.md
 
@@ -90,7 +92,7 @@ dashboard   → user_id(PK), payload(jsonb), imported_at（T12 新增；dashboar
 
 | 優先度 | 功能 | 說明 |
 |--------|------|------|
-| 高 | 看板推播（契約階段③） | PWA（manifest + SW）+ Web Push；發送端由 Cloudflare Worker cron 承接（讀 Supabase dashboard + Yahoo EOD 判定貼線/跨線/催化劑）；iOS 16.4+ 需加入主畫面 |
+| 高 | 價格推播撥開 flag | 雙軌比對（App 判定 vs Claude 日掃，7/7 起一至兩週）通過後，`infra/wrangler.toml` 改 `PRICE_PUSH_ENABLED="true"` → `npx wrangler deploy`；之後 Claude 例行掃描交棒（v3.2 B4） |
 | 中 | 池間資金轉移 | 從台股池轉到美股池（含匯率換算），同時記兩筆 pool_flows |
 | 中 | 目標配置與偏離警示 | 設定每個標的的目標佔比 |
 | 低 | 備注欄位 | 每筆買入可加投資理由 |
