@@ -2,3 +2,18 @@ name = "raspy-cherry-f806"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 account_id = "acc0b7717def62d192258925640f6979"
+
+# T13 看板推播：台股收盤掃描（14:30 台北 = 06:30 UTC）、美股收盤掃描（05:00 台北 = 21:00 UTC）
+[triggers]
+crons = ["30 6 * * 1-5", "0 21 * * 1-5"]
+
+[vars]
+SUPABASE_URL = "https://ewgduyrxtvwznvvmldtr.supabase.co"
+VAPID_PUBLIC_KEY = "BDppNpU2yIR9Bm-76rpwQTmnjHBUylbvI5Wkk-dHUXqDlgqElvs-zre_BWFcFiZemUjDUx7H6JMNAWqCzmbFYwo"
+VAPID_SUBJECT = "mailto:calvin99.tw@gmail.com"
+# 價格推播 feature flag（契約附錄 D）：雙軌比對驗證通過後改 "true" 並重新部署
+PRICE_PUSH_ENABLED = "false"
+
+# Secrets（不入版控，用 npx wrangler secret put 設定）：
+#   SUPABASE_SERVICE_KEY — Supabase service_role key（Dashboard → Settings → API）
+#   VAPID_PRIVATE_JWK    — VAPID 私鑰（JWK JSON，產生時直接 pipe 進 secret）

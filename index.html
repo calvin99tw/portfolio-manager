@@ -5,6 +5,11 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>投資組合管理</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12151d">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.js" integrity="sha384-8A8NbbMug1jd/CYs7b0nSc6FPM4L9GKg/VzKxg6hst+UgTcWTQr0ry7knxGrSOtT" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js" integrity="sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw" crossorigin="anonymous"></script>
@@ -564,6 +569,21 @@ h1, .heading { color: var(--text-1); }
       <div style="font-size:11px;color:var(--text-4);margin-top:10px;line-height:1.7">
         ※ 匯入 Claude 日更/建檔產出的 dashboard.json（股票分析資料夾，schema v1.x）；重複匯入即覆蓋<br>
         ※ 看板頁依此資料 + Yahoo 即時價計算各關鍵價距離與貼線提示
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px">
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">推播通知（看板掃描）</div>
+      <div id="pushStatus" style="font-size:11px;color:var(--text-3);line-height:1.7;margin-bottom:14px">檢查中…</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-action" id="btn-push-enable" onclick="enablePush()">🔔 啟用推播</button>
+        <button class="btn btn-action" id="btn-push-disable" onclick="disablePush()" style="display:none">🔕 停用推播</button>
+        <button class="btn btn-action" id="btn-push-test" onclick="testPush()" style="display:none">📨 發送測試通知</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-4);margin-top:10px;line-height:1.7">
+        ※ 每日收盤後自動掃描（台股 14:30、美股 05:00 台北時間）：催化劑到期即推播；貼線/跨線推播驗證期後啟用<br>
+        ※ iPhone/iPad 需 iOS 16.4+ 且先「加入主畫面」，再從主畫面圖示開啟才能啟用<br>
+        ※ 訂閱依裝置各自獨立，每台裝置各啟用一次
       </div>
     </div>
 
@@ -2671,6 +2691,126 @@ function renderDashboardTab() {
   fetchDashboardPrices().then(fetched => { if(fetched) renderDashboardTab(); });
 }
 
+// ══════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS (T13) — 契約 v1 階段③
+// ══════════════════════════════════════════════════════
+const VAPID_PUBLIC_KEY = "BDppNpU2yIR9Bm-76rpwQTmnjHBUylbvI5Wkk-dHUXqDlgqElvs-zre_BWFcFiZemUjDUx7H6JMNAWqCzmbFYwo";
+
+function urlB64ToUint8Array(s) {
+  const pad = "=".repeat((4 - s.length % 4) % 4);
+  const raw = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+
+function pushSupported() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+async function registerSW() {
+  if(!("serviceWorker" in navigator)) return null;
+  try { return await navigator.serviceWorker.register("sw.js"); }
+  catch(e) { console.warn("SW 註冊失敗：", e); return null; }
+}
+
+async function getPushSubscription() {
+  if(!pushSupported()) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return await reg.pushManager.getSubscription();
+  } catch(e) { return null; }
+}
+
+async function updatePushStatus() {
+  const el = document.getElementById("pushStatus");
+  const btnOn = document.getElementById("btn-push-enable");
+  const btnOff = document.getElementById("btn-push-disable");
+  const btnTest = document.getElementById("btn-push-test");
+  if(!el) return;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if(!pushSupported()) {
+    el.innerHTML = isIOS && !standalone
+      ? `此裝置尚無法啟用：請先用 Safari「分享 → 加入主畫面」，再從主畫面圖示開啟本 App（iOS 16.4+）`
+      : `此瀏覽器不支援 Web Push`;
+    btnOn.style.display = "none"; btnOff.style.display = "none"; btnTest.style.display = "none";
+    return;
+  }
+  const sub = await getPushSubscription();
+  if(sub) {
+    el.textContent = "已啟用（本裝置）— 收盤掃描觸發時將收到通知";
+    btnOn.style.display = "none"; btnOff.style.display = ""; btnTest.style.display = "";
+  } else {
+    el.textContent = Notification.permission === "denied"
+      ? "通知權限已被拒絕，請至系統設定重新允許後再啟用"
+      : "未啟用（本裝置）";
+    btnOn.style.display = ""; btnOff.style.display = "none"; btnTest.style.display = "none";
+  }
+}
+
+async function enablePush() {
+  const uid = currentUser?.id;
+  if(!uid) { showToast("請先登入", true); return; }
+  if(!pushSupported()) { showToast("此環境不支援推播（iOS 需 16.4+ 並從主畫面開啟）", true); return; }
+  const btn = document.getElementById("btn-push-enable");
+  if(btn) btn.disabled = true;
+  try {
+    const perm = await Notification.requestPermission();
+    if(perm !== "granted") { showToast("未授予通知權限", true); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const j = sub.toJSON();
+    const { error } = await sb.from('push_subscriptions').upsert(
+      { user_id: uid, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth },
+      { onConflict: 'endpoint' });
+    if(error) throw error;
+    showToast("推播已啟用 ✓");
+  } catch(e) {
+    console.warn("enablePush 失敗：", e);
+    showToast("啟用失敗：" + (e.message || e), true);
+  } finally {
+    if(btn) btn.disabled = false;
+    updatePushStatus();
+  }
+}
+
+async function disablePush() {
+  const uid = currentUser?.id;
+  try {
+    const sub = await getPushSubscription();
+    if(sub) {
+      const endpoint = sub.endpoint;
+      await sub.unsubscribe();
+      if(uid) await sb.from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', uid);
+    }
+    showToast("推播已停用");
+  } catch(e) {
+    console.warn("disablePush 失敗：", e);
+    showToast("停用失敗，請重試", true);
+  } finally { updatePushStatus(); }
+}
+
+async function testPush() {
+  const btn = document.getElementById("btn-push-test");
+  if(btn) btn.disabled = true;
+  try {
+    const sub = await getPushSubscription();
+    if(!sub) { showToast("尚未啟用推播", true); return; }
+    const res = await fetch(`${YAHOO_PROXY}/push/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub.toJSON()),
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    showToast("測試通知已送出，數秒內應收到");
+  } catch(e) {
+    console.warn("testPush 失敗：", e);
+    showToast("測試發送失敗：" + (e.message || e), true);
+  } finally { if(btn) btn.disabled = false; }
+}
+
 function openFlowEditModal(id) {
   const f = poolFlows.find(x=>x.id===id);
   if(!f) return;
@@ -2842,6 +2982,9 @@ async function initPortfolioApp() {
   syncToolbar();
   render();
   updateDashImportInfo();
+
+  // Step 4.5: Service Worker + 推播狀態（T13）
+  registerSW().then(() => updatePushStatus());
 
   // Step 5: 自動抓取行情（股價 + 匯率）
   fetchMarketData();
