@@ -7,6 +7,10 @@ account_id = "acc0b7717def62d192258925640f6979"
 [triggers]
 crons = ["30 6 * * 1-5", "0 21 * * 1-5"]
 
+# Workers Logs（免費額度內）：cron 掃描結果/失敗記錄，Dashboard → Observability 查閱
+[observability]
+enabled = true
+
 [vars]
 SUPABASE_URL = "https://ewgduyrxtvwznvvmldtr.supabase.co"
 VAPID_PUBLIC_KEY = "BDppNpU2yIR9Bm-76rpwQTmnjHBUylbvI5Wkk-dHUXqDlgqElvs-zre_BWFcFiZemUjDUx7H6JMNAWqCzmbFYwo"

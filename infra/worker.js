@@ -219,10 +219,26 @@ async function runScan(market, env) {
 
 // ══════════════ Handlers ══════════════
 
+// cron 單發無重試會因暫時性失敗（上游瞬斷）整班靜默錯過（2026-07-10 實例）；
+// 加三次嘗試 + 退避，並 console 記錄供 Observability 查閱
+async function runScanWithRetry(market, env) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const result = await runScan(market, env);
+      console.log(`scan ${market} ok (attempt ${attempt}):`, JSON.stringify(result));
+      return result;
+    } catch (e) {
+      console.error(`scan ${market} failed (attempt ${attempt}/3):`, e.message);
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 30000 * attempt));
+    }
+  }
+  return null;
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const market = event.cron === US_CRON ? "US" : "TW";
-    ctx.waitUntil(runScan(market, env));
+    ctx.waitUntil(runScanWithRetry(market, env));
   },
 
   async fetch(request, env) {
