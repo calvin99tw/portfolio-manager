@@ -2629,9 +2629,12 @@ function dashCardHTML(t, near, today) {
     ? `<div class="dash-text">${t.catalysts.map(c => {
         const bi = { positive:"🔼", negative:"🔻", neutral:"⚖️" }[c.bias] || "";
         const isToday = c.date === today;
-        // dateConfidence：confirmed 日期正常色、estimated（或缺失）淡色；當日到期整列高亮優先
-        const dateColor = c.dateConfidence === "confirmed" ? "" : ' style="color:var(--text-4)"';
-        const dateHTML = isToday ? esc(c.date) : `<span${dateColor}>${esc(c.date)}</span>`;
+        // dateConfidence：confirmed 醒目（text-2 加粗）、estimated/缺失 淡化（text-4 斜體 + 前綴「約」）；
+        // 當日到期整列 t-warn 高亮優先級最高
+        let dateHTML;
+        if(isToday) dateHTML = esc(c.date);
+        else if(c.dateConfidence === "confirmed") dateHTML = `<span style="color:var(--text-2);font-weight:500">${esc(c.date)}</span>`;
+        else dateHTML = `<span style="color:var(--text-4);font-style:italic">約 ${esc(c.date)}</span>`;
         const hot = isToday ? ` class="t-warn fw-500"` : "";
         return `<span${hot}>📅 ${dateHTML} ${esc(c.event)} ${bi}</span>`;
       }).join("<br>")}</div>` : "";
