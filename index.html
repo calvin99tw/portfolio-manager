@@ -2572,7 +2572,9 @@ function dashCardHTML(t, near, today) {
     stop:       { i:"🛑", l:"停損", cls:" stop" },
   };
   const kindMap = { entry:"進場", add:"加碼", trim:"鎖利", stop:"停損", review:"檢視" };
+  const orMap = { pipeline:"🔬 篩選", user:"👤 自選" };
   const st = stMap[t.status] || { i:"", l:esc(t.status) };
+  const originBadge = orMap[t.origin] ? `<span class="dash-badge">${orMap[t.origin]}</span>` : "";
 
   // 現價列
   let priceHTML = `<span class="t-mute2" style="font-size:12px">價格待更新 ⚠</span>`;
@@ -2626,8 +2628,12 @@ function dashCardHTML(t, near, today) {
   const catsHTML = (t.catalysts || []).length
     ? `<div class="dash-text">${t.catalysts.map(c => {
         const bi = { positive:"🔼", negative:"🔻", neutral:"⚖️" }[c.bias] || "";
-        const hot = c.date === today ? ` class="t-warn fw-500"` : "";
-        return `<span${hot}>📅 ${esc(c.date)} ${esc(c.event)} ${bi}</span>`;
+        const isToday = c.date === today;
+        // dateConfidence：confirmed 日期正常色、estimated（或缺失）淡色；當日到期整列高亮優先
+        const dateColor = c.dateConfidence === "confirmed" ? "" : ' style="color:var(--text-4)"';
+        const dateHTML = isToday ? esc(c.date) : `<span${dateColor}>${esc(c.date)}</span>`;
+        const hot = isToday ? ` class="t-warn fw-500"` : "";
+        return `<span${hot}>📅 ${dateHTML} ${esc(c.event)} ${bi}</span>`;
       }).join("<br>")}</div>` : "";
 
   // footer
@@ -2641,6 +2647,7 @@ function dashCardHTML(t, near, today) {
         <span class="fw-500" style="font-size:14px">${esc(t.ticker)} ${esc(t.name)}</span>
         <span class="dash-badge">${htMap[t.holdingType] || esc(t.holdingType)}</span>
         <span class="dash-badge${st.cls || ""}">${st.i} ${st.l}</span>
+        ${originBadge}
       </div>
       <div>${priceHTML}</div>
     </div>
@@ -2678,14 +2685,25 @@ function renderDashboardTab() {
     <span style="margin-left:auto">${priceTime}</span>
   </div>`;
 
-  // 排序：持有在上（保留 JSON 原順序），watch 觀察在下
+  // 排序：持有在上（保留 JSON 原順序），watch 觀察在下；觀察再依 origin 分兩組
   const held = dashboardData.tickers.filter(t => t.holdingType !== "watch");
   const watching = dashboardData.tickers.filter(t => t.holdingType === "watch");
+  const watchPipeline = watching.filter(t => t.origin === "pipeline");
+  const watchUser = watching.filter(t => t.origin !== "pipeline");
   const section = (title, arr) => arr.length
     ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-4px">${title}</div>
        <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today)).join("")}</div>` : "";
+  const subSection = (title, arr) => arr.length
+    ? `<div style="font-size:11px;color:var(--text-4);margin-top:12px;margin-bottom:-4px;padding-left:2px">${title}</div>
+       <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today)).join("")}</div>` : "";
+  const watchHeader = watching.length
+    ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-8px">👁 觀察名單</div>` : "";
 
-  root.innerHTML = metaHTML + section("💼 持有標的", held) + section("👁 觀察名單", watching);
+  root.innerHTML = metaHTML
+    + section("💼 持有標的", held)
+    + watchHeader
+    + subSection("🔬 策略篩選", watchPipeline)
+    + subSection("👤 手動自選", watchUser);
 
   // 取價（5 分鐘節流）後重繪；fetch 過就不會再進來（節流擋住遞迴）
   fetchDashboardPrices().then(fetched => { if(fetched) renderDashboardTab(); });
