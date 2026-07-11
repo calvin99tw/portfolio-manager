@@ -34,9 +34,15 @@ DRAM/CRWD/3017）：
 - 分組計數：持有 8、🔬 篩選 1（3017）、👤 自選 6（6531/INTC/ON/SPCX/DRAM/CRWD）。
 - 線上實測待部署後匯入 15 檔 JSON 確認。
 
-## 需回報 Cowork（非阻擋）
+## 資料閉環：DRAM 缺 dateConfidence（已結案）
 
-- `DRAM` 的 catalyst 缺 `dateConfidence` 欄位，App 已容錯當 estimated（淡色）；來源仍應補正。
+- **現象**：`DRAM` 的 catalyst 缺 `dateConfidence` 欄位，App 已容錯當 estimated（淡色）顯示。
+- **根因（Cowork 回覆）**：DRAM 是 7/9 沿用（carry-forward）的舊資料，早於 `dateConfidence`
+  成為標準欄位；Cowork 本輪只對「新寫/重建」的 catalyst 補了該欄位，沿用項漏檢。
+- **修正**：Cowork 補正該筆，並將「檢查 carry-forward 項的欄位完整性」納入未來建檔流程（不只新寫項）。
+- **App 端不需改**：容錯設計正是為此——缺失即當 estimated，補正後自動跟上，兩端皆無額外動作。
+- **印證 T12 踩坑教訓**：呈現層對上游資料錯誤要有容錯，但根因仍回報資料源修正——
+  容錯是防線、不是修正。本次走完整閉環：App 容錯擋住 → 回報 Cowork → Cowork 修根因 + 補流程。
 
 ## 設計決策
 
