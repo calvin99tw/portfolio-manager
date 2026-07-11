@@ -23,9 +23,12 @@ DRAM/CRWD/3017）：
   中性 `.dash-badge`（不用紅/綠/琥珀——附錄 A 琥珀為唯一注意色）；`origin` 缺失則不渲染。
 - **觀察區分兩組**：`watching` 依 origin 切成「🔬 策略篩選」「👤 手動自選」兩子區塊，
   各用縮排子標題 + `.dash-grid`；子組為空不出標題。持有區「💼 持有標的」不變。
-- **dateConfidence 分色**：催化劑列的**日期字串** confirmed 正常色、estimated（或缺失）
-  淡色（var(--text-4)）；當日到期整列 t-warn 高亮優先級最高，維持不變。event 文字與
-  bias 圖示不動（estimated 的「日期約值」已在 event 字串內）。
+- **dateConfidence 對比**：催化劑列的**日期字串**——confirmed → `text-2` 加粗（醒目）；
+  estimated/缺失 → `text-4` 斜體 + 前綴「約」（淡化 + 形狀 + 文字三重訊號）；當日到期整列
+  t-warn 高亮優先級最高，維持不變。
+  - ⚠️ 初版僅把 estimated 由 text-3 降到 text-4（相鄰灰階），深/淺色下**都幾乎看不出差異**，
+    且方向偏離契約「confirmed 才醒目」本意；改為雙向強化（confirmed 醒目 + estimated 三重淡化）
+    後兩主題與色盲皆可辨。event 文字/bias 圖示不動（現行 event 已改用欄位、不再帶「約值」文字）。
 
 ## 驗證
 
