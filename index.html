@@ -2546,18 +2546,44 @@ async function fetchDashboardPrices() {
   return true;
 }
 
-function dashVolumeHTML(vc, p) {
+// 該市場當日是否已收盤（成交量才算完整）：用 regularMarketTime 換市場當地時間，
+// 時戳 ≥ 收盤（美股 16:00 ET / 台股 13:30）才視為收盤量；盤前/盤中的時戳 < 收盤 → 量未定。
+function isSessionClosed(market, timeEpoch) {
+  if(typeof timeEpoch !== "number") return false;
+  const tz = market === "US" ? "America/New_York" : "Asia/Taipei";
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour12: false, hour: "2-digit", minute: "2-digit" })
+    .formatToParts(new Date(timeEpoch * 1000));
+  const get = t => parts.find(x => x.type === t)?.value;
+  const hm = parseInt(get("hour")) + parseInt(get("minute")) / 60;
+  return hm >= (market === "US" ? 16 : 13.5);
+}
+
+function dashVolumeHTML(vc, p, market) {
   if(!vc) return "";
-  let txt;
-  if(typeof p?.volume === "number" && p.volume > 0) {
-    const v = vc.unit === "lot" ? p.volume / 1000 : p.volume;
-    const ok = vc.type === "dry" ? (vc.max != null && v <= vc.max) : (vc.min != null && v >= vc.min);
-    const label = vc.type === "dry" ? "量縮" : "量增";
-    txt = ok ? `${label}條件達標（當日量 ${fmtN(v)}）` : `${label}條件未達（當日量 ${fmtN(v)}）`;
-  } else {
-    txt = "量能條件待人工確認";
+  const label = vc.type === "dry" ? "量縮" : "量增";
+  const unit = vc.unit === "lot" ? "張" : "股";
+  const hasVol = typeof p?.volume === "number" && p.volume > 0;
+  const v = hasVol ? (vc.unit === "lot" ? p.volume / 1000 : p.volume) : null;
+  const volTxt = hasVol ? `當日量 ${fmtN(v)} ${unit}` : "";
+  const thr = vc.type === "dry" ? vc.max : vc.min;
+
+  // 門檻未設定（如 20 日均量尚未算定）：顯示量、不下判定
+  if(thr == null) {
+    return `<div class="dash-note">${hasVol ? `${volTxt}（門檻未設定，待建檔）` : `${label}門檻未設定（待建檔）`}</div>`;
   }
-  return `<div class="dash-note">${txt}</div>`;
+
+  const rvolTxt = (typeof vc.rvol === "number") ? `，RVOL${vc.type === "dry" ? "&lt;" : "&gt;"}${vc.rvol}` : "";
+  const thrTxt = `門檻 ${vc.type === "dry" ? "≤" : "≥"}${fmtN(thr)}${rvolTxt}`;
+
+  if(!hasVol) return `<div class="dash-note">${label}條件待人工確認（${thrTxt}）</div>`;
+
+  // 收盤量才下達標/未達判定；未收盤（盤前/盤中）只揭露門檻、不判定
+  if(!isSessionClosed(market, p.time)) {
+    return `<div class="dash-note">${volTxt}／${thrTxt}（未收盤，收盤後判定）</div>`;
+  }
+
+  const ok = vc.type === "dry" ? (v <= thr) : (v >= thr);
+  return `<div class="dash-note">${label}條件${ok ? "達標" : "未達"}（${volTxt}／${thrTxt}）</div>`;
 }
 
 function dashCardHTML(t, near, today) {
@@ -2611,7 +2637,7 @@ function dashCardHTML(t, near, today) {
     const arrow = lv.direction === "above" ? "↑" : "↓";
     return `<div class="dash-level${cls}">
       <div>${arrow} <b style="color:var(--text-2)">${kindMap[lv.kind] || esc(lv.kind)}</b> ${fmtPrice(lv.price, t.currency)}
-        ${lv.note ? `<div class="dash-note">${esc(lv.note)}</div>` : ""}${dashVolumeHTML(lv.volumeCondition, p)}
+        ${lv.note ? `<div class="dash-note">${esc(lv.note)}</div>` : ""}${dashVolumeHTML(lv.volumeCondition, p, t.market)}
       </div>
       <div style="text-align:right;white-space:nowrap">${distHTML}</div>
     </div>`;
