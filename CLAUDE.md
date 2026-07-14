@@ -10,6 +10,7 @@
 2. **T15 起**：任務脈絡在 GitHub Issue/PR——用 `gh issue view <N>` / `gh pr view <M>` 讀取
    （需 active 帳號為 `calvin99tw`，見「開發流程」）。
 3. **T1~T14**：脈絡在封存的 `docs/Tx-spec.md` / `docs/Tx-summary.md`，直接讀檔。
+4. **檢查 `../INBOX.md`**（位於 `投資理財/` 根目錄）是否有 Cowork 留給 Code 的待處理訊息——這是 Code ↔ Cowork 的臨時交換管道（local 檔案，兩邊皆可讀寫，繞開 GitHub 帳號問題），非正式規格仍走 Issue/建檔文件。處理完該筆訊息後記得清空（刪除內容，只留區塊標題）。
 
 ---
 
