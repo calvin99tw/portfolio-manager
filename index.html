@@ -2602,6 +2602,8 @@ function dashCardHTML(t, near, today) {
   const kindMap = { entry:"進場", add:"加碼", trim:"鎖利", stop:"停損", review:"檢視" };
   const orMap = { pipeline:"🔬 篩選", user:"👤 自選" };
   const st = stMap[t.status] || { i:"", l:esc(t.status) };
+  const intendedTypeBadge = (t.holdingType === "watch" && htMap[t.intendedType])
+    ? `<span class="dash-badge">${htMap[t.intendedType]}</span>` : "";
   const originBadge = orMap[t.origin] ? `<span class="dash-badge">${orMap[t.origin]}</span>` : "";
 
   // 現價列
@@ -2677,6 +2679,7 @@ function dashCardHTML(t, near, today) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="fw-500" style="font-size:14px">${esc(t.ticker)} ${esc(t.name)}</span>
         <span class="dash-badge">${htMap[t.holdingType] || esc(t.holdingType)}</span>
+        ${intendedTypeBadge}
         <span class="dash-badge${st.cls || ""}">${st.i} ${st.l}</span>
         ${originBadge}
       </div>
