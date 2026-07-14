@@ -2504,8 +2504,10 @@ function updateDashImportInfo() {
   const el = document.getElementById("dashImportInfo");
   if(!el) return;
   if(!dashboardData) { el.textContent = "尚未匯入看板資料"; return; }
-  const gen = (dashboardData.generatedAt || "").slice(0, 16).replace("T", " ");
-  el.innerHTML = `已匯入：${esc(dashboardData.sourceReport || "—")}　·　${dashboardData.tickers?.length || 0} 檔　·　產出 ${esc(gen)}`;
+  const mod = dashboardData.lastModifiedAt || dashboardData.generatedAt || "";
+  const modLabel = dashboardData.lastModifiedAt ? "最後修改" : "產出";
+  const modText = mod.slice(0, 16).replace("T", " ");
+  el.innerHTML = `已匯入：${esc(dashboardData.sourceReport || "—")}　·　${dashboardData.tickers?.length || 0} 檔　·　${modLabel} ${esc(modText)}`;
 }
 
 // 盤中判斷（跨線弱化文案用）：TW 平日 09:00–13:30 台北；US 平日 09:30–16:00 紐約（Intl 自動處理夏令）
@@ -2705,11 +2707,13 @@ function renderDashboardTab() {
   const priceTime = _dashFetchedAt
     ? `價格更新於 ${new Date(_dashFetchedAt).toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false})}`
     : "價格載入中…";
-  const gen = (dashboardData.generatedAt || "").slice(0, 16).replace("T", " ");
+  const mod = dashboardData.lastModifiedAt || dashboardData.generatedAt || "";
+  const modLabel = dashboardData.lastModifiedAt ? "最後修改" : "產出";
+  const modText = mod.slice(0, 16).replace("T", " ");
   const metaHTML = `<div class="card" style="padding:12px 18px;font-size:11px;color:var(--text-3);display:flex;gap:14px;flex-wrap:wrap;align-items:center">
     <span>基準：台股 ${esc(bd.tw || "—")}｜美股 ${esc(bd.us || "—")}</span>
     <span>來源：${esc(dashboardData.sourceReport || "—")}</span>
-    <span>產出：${esc(gen)}</span>
+    <span>${modLabel}：${esc(modText)}</span>
     <span>貼線門檻 ±${near}%</span>
     <span style="margin-left:auto">${priceTime}</span>
   </div>`;
