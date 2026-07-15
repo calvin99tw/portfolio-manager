@@ -564,7 +564,7 @@ h1, .heading { color: var(--text-1); }
     <div class="card" style="padding:24px">
       <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">看板資料</div>
       <div id="dashImportInfo" style="font-size:11px;color:var(--text-3);line-height:1.7;margin-bottom:14px">尚未匯入看板資料</div>
-      <input type="file" id="dashFileInput" accept=".json,application/json" style="display:none" onchange="importDashboardJSON(this.files[0]);this.value=''">
+      <input type="file" id="dashFileInput" accept=".json" style="display:none" onchange="importDashboardJSON(this.files[0]);this.value=''">
       <button class="btn btn-action" onclick="document.getElementById('dashFileInput').click()">📥 匯入看板 JSON</button>
       <div style="font-size:11px;color:var(--text-4);margin-top:10px;line-height:1.7">
         ※ 匯入 Claude 日更/建檔產出的 dashboard.json（股票分析資料夾，schema v1.x）；重複匯入即覆蓋<br>
