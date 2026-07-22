@@ -2224,7 +2224,18 @@ async function confirmSell(){
       sells.push(newSell);
       if(ss===b.shares){
         const { error: delErr } = await sb.from('buys').delete().eq('id',sellTargetId).eq('user_id',uid);
-        if(delErr) throw delErr;
+        if(delErr) {
+          // 補償回滾：刪除原買入批次失敗，把剛寫入的賣出記錄也撤銷，避免半成功的不一致資料
+          // （股數膨脹：批次未刪除但多一筆賣出記錄）。根本解法（Postgres RPC 原子交易）見 #11。
+          const { error: rollbackErr } = await sb.from('sells').delete().eq('id',newSell.id).eq('user_id',uid);
+          if(!rollbackErr) {
+            sells = sells.filter(x=>x.id!==newSell.id);
+            showToast("刪除原買入批次失敗，已自動撤銷此筆賣出，請重新嘗試", true);
+          } else {
+            showToast("資料可能不一致（買入批次未刪除、賣出記錄殘留），請手動檢查交易歷史與持倉", true);
+          }
+          return;
+        }
         buys=buys.filter(x=>x.id!==sellTargetId);
       } else {
         const remainingFee = (b.buyFee||0) - buyFeeAlloc;
