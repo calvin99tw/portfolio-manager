@@ -109,6 +109,11 @@ push_subscriptions → id, user_id, endpoint(unique), p256dh, auth, created_at�
 - 字型：`DM Mono`（monospace）+ `Syne`（標題）
 - 主題：Dark / Light / System 三段切換，顏色透過 CSS variables 定義
 - 顏色語意（亞洲市場慣例）：紅色 = 漲/獲利，綠色 = 跌/虧損，紫色 = 強調
+- **字級規範（Typography Scale）**：**禁止在 JS 樣板字串中使用 inline `style="font-size:...px"`**，所有字級一律透過 `<style>` 區塊中具名的 CSS class 定義，確保單一事實來源（前例：2026-07 Pool Card 字級調整時，因遺漏站內 inline font-size 覆蓋，導致部分文字未套用新字級——class 已改但 inline 優先權更高，悄悄蓋掉）。三層字級（依現有 CSS 收斂整理，非另訂新標準）：
+  - **主要數值**（金額/股數等核心數字）：16px 起（如 `.pool-stat-value`、`.s-value`）
+  - **次要資料/說明**（任何呈現真實資料的標籤、金額、備註、狀態文字）：12px 起（低於 12px 不符 Apple HIG Caption 1 / Material Design body-small 的建議下限）
+  - **裝飾性小字**（純 UI 裝飾，不承載實際資料，如 `.tag`／`.dash-badge` 狀態徽章、緊湊表格操作按鈕）：可維持 11px
+  - 全站現有 35 處低於 12px 的 inline font-size 待依此規範檢視，詳見 #16
 - **CSV 匯出格式變更須同步策略文件**：本地備份 CSV 的區塊或欄位有任何變更（新增/廢棄/改名）時，必須同步檢查並更新 `../股票分析/Taiwan_Alpha_Strategist_v3_1.md` 的 Step 0 解讀規則。該 prompt 以備份 CSV 為唯一資料介面，漏更新會導致分析報告誤讀資料（前例：T9 廢棄 poolTWD/poolUSD 後未同步，日更報告把初始入金額誤當可動用現金）
 - **任務與修復皆用 GitHub Issue 追蹤（T15 起），不再寫 `docs/Tx-spec.md` / `docs/Tx-summary.md` / `docs/bugfix-*.md`**：每個正式任務或臨時修復開一個 Issue 當 spec/討論起點，完工於該 Issue 留 summary 註解後關閉；程式碼變更用 PR 掛 `Fixes #N`。既有 T1~T14 的 `docs/Tx-*.md` 封存不動。
 - **隱私（重要）**：repo 為 **Public → Issue 與 PR 皆公開**。持倉部位、加碼價位、決策細節等敏感內容**不得寫入 Issue/PR**（那些留在 Supabase / iCloud `股票分析/`）；Issue/PR 只談 App 架構與實作。
