@@ -382,7 +382,7 @@ h1, .heading { color: var(--text-1); }
     </div>
 
     <hr class="login-divider">
-    <div style="font-size:11px;color:var(--text-4);text-align:center;line-height:1.7">
+    <div style="font-size:12px;color:var(--text-4);text-align:center;line-height:1.7">
       無密碼登入 · 資料儲存於雲端
     </div>
   </div>
@@ -414,8 +414,8 @@ h1, .heading { color: var(--text-1); }
     <button class="btn btn-primary" id="btn-save-data" onclick="exportCSV()">💾 本地備份</button>
     <!-- User info + logout -->
     <div style="display:flex;align-items:center;gap:8px;border-left:1px solid var(--border-strong);padding-left:10px">
-      <span id="userEmail" style="font-size:11px;color:var(--text-3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-      <button class="btn btn-action" onclick="signOut()" style="font-size:11px;padding:5px 12px">登出</button>
+      <span id="userEmail" style="font-size:12px;color:var(--text-3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button class="btn btn-action" onclick="signOut()" style="font-size:12px;padding:5px 12px">登出</button>
     </div>
   </div>
 </div>
@@ -478,7 +478,7 @@ h1, .heading { color: var(--text-1); }
     </div>
 
     <!-- Legend (semantic, red/green only) -->
-    <div class="legend" style="font-size:11px;color:var(--text-3)">
+    <div class="legend" style="font-size:12px;color:var(--text-3)">
       <span>狀態判讀：</span>
       <span class="tag-status" style="background:var(--pos-bg);border:1px solid var(--pos-border);color:var(--pos);padding:2px 10px;border-radius:99px">過熱 ≥+20%</span>
       <span class="tag-status" style="background:var(--pos-bg);border:1px solid var(--pos-border);color:var(--pos-dim);padding:2px 10px;border-radius:99px">強勢 ≥+10%</span>
@@ -545,7 +545,7 @@ h1, .heading { color: var(--text-1); }
           </div>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text-4);margin-top:14px;line-height:1.7">
+      <div style="font-size:12px;color:var(--text-4);margin-top:14px;line-height:1.7">
         ※ 投入本金由「入金 / 出金」紀錄加總，請在持倉頁工具列點「入金 / 出金」記錄資金進出<br>
         ※ 匯率僅用於「合併檢視」模式下將美股部位換算為 TWD，原幣別資料不會被改動<br>
         ※ 股價來源：Yahoo Finance（台股 + 美股，盤中約延遲 15–20 分，收盤價準確）；匯率來源：中央銀行 CBC（每日更新）<br>
@@ -563,10 +563,10 @@ h1, .heading { color: var(--text-1); }
 
     <div class="card" style="padding:24px">
       <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">看板資料</div>
-      <div id="dashImportInfo" style="font-size:11px;color:var(--text-3);line-height:1.7;margin-bottom:14px">尚未匯入看板資料</div>
+      <div id="dashImportInfo" style="font-size:12px;color:var(--text-3);line-height:1.7;margin-bottom:14px">尚未匯入看板資料</div>
       <input type="file" id="dashFileInput" accept=".json" style="display:none" onchange="importDashboardJSON(this.files[0]);this.value=''">
       <button class="btn btn-action" onclick="document.getElementById('dashFileInput').click()">📥 匯入看板 JSON</button>
-      <div style="font-size:11px;color:var(--text-4);margin-top:10px;line-height:1.7">
+      <div style="font-size:12px;color:var(--text-4);margin-top:10px;line-height:1.7">
         ※ 匯入 Claude 日更/建檔產出的 dashboard.json（股票分析資料夾，schema v1.x）；重複匯入即覆蓋<br>
         ※ 看板頁依此資料 + Yahoo 即時價計算各關鍵價距離與貼線提示
       </div>
@@ -574,13 +574,13 @@ h1, .heading { color: var(--text-1); }
 
     <div class="card" style="padding:24px">
       <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">推播通知（看板掃描）</div>
-      <div id="pushStatus" style="font-size:11px;color:var(--text-3);line-height:1.7;margin-bottom:14px">檢查中…</div>
+      <div id="pushStatus" style="font-size:12px;color:var(--text-3);line-height:1.7;margin-bottom:14px">檢查中…</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-action" id="btn-push-enable" onclick="enablePush()">🔔 啟用推播</button>
         <button class="btn btn-action" id="btn-push-disable" onclick="disablePush()" style="display:none">🔕 停用推播</button>
         <button class="btn btn-action" id="btn-push-test" onclick="testPush()" style="display:none">📨 發送測試通知</button>
       </div>
-      <div style="font-size:11px;color:var(--text-4);margin-top:10px;line-height:1.7">
+      <div style="font-size:12px;color:var(--text-4);margin-top:10px;line-height:1.7">
         ※ 每日收盤後自動掃描（台股 14:30、美股 05:00 台北時間）：催化劑到期即推播；貼線/跨線推播驗證期後啟用<br>
         ※ iPhone/iPad 需 iOS 16.4+ 且先「加入主畫面」，再從主畫面圖示開啟才能啟用<br>
         ※ 訂閱依裝置各自獨立，每台裝置各啟用一次
@@ -591,7 +591,7 @@ h1, .heading { color: var(--text-1); }
       <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">帳號</div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">目前登入</div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">目前登入</div>
           <div id="settingsUserEmail" style="font-size:13px;color:var(--text-1)">—</div>
         </div>
         <button class="btn btn-action" onclick="signOut()" style="font-size:12px">登出</button>
@@ -600,7 +600,7 @@ h1, .heading { color: var(--text-1); }
 
     <div class="card" style="padding:24px">
       <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">資料管理</div>
-      <div style="font-size:11px;color:var(--text-3);line-height:1.7;margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text-3);line-height:1.7;margin-bottom:14px">
         資料儲存於 Supabase 雲端，登入即可跨裝置存取。CSV 匯出可作為本機備份。
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -714,7 +714,7 @@ h1, .heading { color: var(--text-1); }
     <div><label class="form-label">賣出日期 *</label><input id="s-date" type="date"></div>
     <div id="s-edit-extras" style="grid-column:1/-1;display:none">
       <div style="border-top:1px solid var(--border);margin:8px 0;padding-top:12px">
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:10px">編輯模式：可修改買入相關資訊</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">編輯模式：可修改買入相關資訊</div>
         <div class="form-grid">
           <div><label class="form-label">買入均價</label><input id="s-buyPrice" type="number"></div>
           <div><label class="form-label">買入手續費（攤分）</label><input id="s-buyFee" type="number" step="0.01"></div>
@@ -1290,7 +1290,7 @@ function pnlClassDim(n) { return n>=0 ? 't-pos-dim' : 't-neg-dim'; }
 function fmtAnnualized(annPct, holdDays) {
   if(holdDays < 365) {
     const daysLeft = Math.ceil(365 - holdDays);
-    return `<span class="t-muted" title="持有滿 365 天後顯示年化報酬" style="font-size:10px">${daysLeft} 天後</span>`;
+    return `<span class="t-muted" title="持有滿 365 天後顯示年化報酬" style="font-size:12px">${daysLeft} 天後</span>`;
   }
   const cls = annPct>=0 ? 't-pos-dim' : 't-neg-dim';
   return `<span class="${cls}">${fmtPct(annPct)}</span>`;
@@ -1676,7 +1676,7 @@ function render(){
       `<div style="width:${s.pct}%;background:${s.color};height:100%;border-right:1px solid var(--bg);box-sizing:border-box;transition:width 0.5s" title="${esc(s.g.name)}: ${s.pct.toFixed(1)}% / ${symbol}${fmtMoney(s.amount,currency)}"></div>`
     ).join("") + (idlePct>0 ? `<div style="width:${idlePct}%;background:var(--bg-elev-3);height:100%;border-left:${segs.length?'1px solid var(--bg)':'none'};box-sizing:border-box" title="可用餘額: ${idlePct.toFixed(1)}%"></div>` : "");
     const legendHTML = segs.map(s =>
-      `<span class="alloc-legend-item"><span class="dot" style="background:${s.color}"></span><span style="color:var(--text-1)">${esc(s.g.name)}</span> <span style="color:var(--text-3)">${s.pct.toFixed(1)}%</span> <span style="color:var(--text-4);font-size:10px">(${symbol}${fmtMoney(s.amount,currency)})</span></span>`
+      `<span class="alloc-legend-item"><span class="dot" style="background:${s.color}"></span><span style="color:var(--text-1)">${esc(s.g.name)}</span> <span style="color:var(--text-3)">${s.pct.toFixed(1)}%</span> <span style="color:var(--text-4);font-size:12px">(${symbol}${fmtMoney(s.amount,currency)})</span></span>`
     ).join("") + `<span class="alloc-legend-item"><span class="dot" style="background:var(--bg-elev-3);border:1px solid var(--border-strong)"></span><span style="color:var(--text-3)">可用餘額</span> <span style="color:var(--text-3)">${idlePct.toFixed(1)}%</span></span>`;
     return `<div class="alloc-bar" style="margin:12px 0 6px">${segHTML}</div><div class="alloc-legend">${legendHTML}</div>`;
   }
@@ -1689,7 +1689,7 @@ function render(){
       <div class="pool-header" style="margin-bottom:10px">
         <div class="pool-title">${title}</div>
         <div style="text-align:right">
-          <div style="font-size:10px;color:var(--text-4);margin-bottom:2px">總資產</div>
+          <div style="font-size:12px;color:var(--text-4);margin-bottom:2px">總資產</div>
           <div style="font-size:18px;font-weight:600;color:var(--text-1)">${fmt(pool.totalAssets)}</div>
         </div>
       </div>
@@ -1718,7 +1718,7 @@ function render(){
         <div><div class="pool-stat-label">已實現損益</div><div class="pool-stat-value ${pool.realized!==0?pnlClass(pool.realized):''}">${fmt(pool.realized)}</div></div>
         <div><div class="pool-stat-label">已收股息</div><div class="pool-stat-value ${pool.dividendsTotal!==0?pnlClass(pool.dividendsTotal):''}">${fmt(pool.dividendsTotal)}</div></div>
         <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;display:flex;justify-content:space-between;align-items:center">
-          <div class="pool-stat-label" style="font-size:11px">累計報酬</div>
+          <div class="pool-stat-label" style="font-size:12px">累計報酬</div>
           <div><span class="pool-key-value ${pnlClass(pool.cumulativeReturn)}">${fmt(pool.cumulativeReturn)}</span><span class="pool-key-pct ${retPct!==0?pnlClass(retPct):''}">${fmtPct(retPct)}</span></div>
         </div>
       </div>
@@ -1759,8 +1759,8 @@ function render(){
   // ── Alerts ──
   const hot=gs.filter(g=>g.pct>=hotT), ov=gs.filter(g=>g.pct<=ovT);
   document.getElementById("alertsDiv").innerHTML=(hot.length||ov.length)?`<div class="alerts-grid">
-    ${hot.length?`<div class="alert-card" style="background:var(--pos-bg);border:1px solid var(--pos-border)"><span style="font-size:18px">🔥</span><div><div style="font-size:12px;font-weight:500;color:var(--pos);margin-bottom:4px">過熱（≥${hotT}%）</div>${hot.map(g=>`<div style="font-size:11px;color:var(--pos-dim);margin-top:2px">${esc(g.name)} ${fmtPct(g.pct)} — 考慮減碼</div>`).join("")}</div></div>`:""}
-    ${ov.length?`<div class="alert-card" style="background:var(--neg-bg);border:1px solid var(--neg-border)"><span style="font-size:18px">📉</span><div><div style="font-size:12px;font-weight:500;color:var(--neg);margin-bottom:4px">超賣（≤${ovT}%）</div>${ov.map(g=>`<div style="font-size:11px;color:var(--neg-dim);margin-top:2px">${esc(g.name)} ${fmtPct(g.pct)} — 考慮加碼</div>`).join("")}</div></div>`:""}
+    ${hot.length?`<div class="alert-card" style="background:var(--pos-bg);border:1px solid var(--pos-border)"><span style="font-size:18px">🔥</span><div><div style="font-size:12px;font-weight:500;color:var(--pos);margin-bottom:4px">過熱（≥${hotT}%）</div>${hot.map(g=>`<div style="font-size:12px;color:var(--pos-dim);margin-top:2px">${esc(g.name)} ${fmtPct(g.pct)} — 考慮減碼</div>`).join("")}</div></div>`:""}
+    ${ov.length?`<div class="alert-card" style="background:var(--neg-bg);border:1px solid var(--neg-border)"><span style="font-size:18px">📉</span><div><div style="font-size:12px;font-weight:500;color:var(--neg);margin-bottom:4px">超賣（≤${ovT}%）</div>${ov.map(g=>`<div style="font-size:12px;color:var(--neg-dim);margin-top:2px">${esc(g.name)} ${fmtPct(g.pct)} — 考慮加碼</div>`).join("")}</div></div>`:""}
   </div>`:"";
 
   renderTable();
@@ -1785,18 +1785,18 @@ function render(){
     const sellNet = s.shares*s.sellPrice - (s.sellFee||0) - (s.sellTax||0);
     const realAnn = buyTotalCost>0 && s.holdDays>0 ? (Math.pow(sellNet/buyTotalCost, 365/s.holdDays)-1)*100 : 0;
     hr+=`<tr class="history-row">
-      <td style="padding-left:20px"><div class="fw-500">${esc(s.name)}</div><div style="font-size:11px;color:var(--text-4)">${esc(s.ticker)}</div></td>
+      <td style="padding-left:20px"><div class="fw-500">${esc(s.name)}</div><div style="font-size:12px;color:var(--text-4)">${esc(s.ticker)}</div></td>
       <td><span class="tag">${s.currency}</span></td>
       <td>${fmtShares(s.shares,s.currency)}</td><td class="t-muted">${fmtPrice(s.costPerShare,s.currency)}</td>
       <td>${fmtPrice(s.sellPrice,s.currency)}<div class="cell-sub">${fmtCur(sellNet,s.currency)}</div></td>
       <td class="t-muted">${s.buyDate}</td><td class="t-muted">${s.sellDate}</td>
       <td class="t-muted">${s.holdDays}天</td>
-      <td class="${c} fw-500" title="${feeTitle}">${fmtCur(s.realizedPnL,s.currency)}${fees>0?' <span style="color:var(--text-4);font-size:10px">ⓘ</span>':''}</td>
+      <td class="${c} fw-500" title="${feeTitle}">${fmtCur(s.realizedPnL,s.currency)}${fees>0?' <span style="color:var(--text-4);font-size:12px">ⓘ</span>':''}</td>
       <td class="${c}">${fmtPct(realReturnPct)}</td>
       <td>${fmtAnnualized(realAnn, s.holdDays)}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openSellEditModal('${s.id}')">編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteSell('${s.id}')">刪除</button>
+        <button class="btn btn-action" style="padding:4px 10px;font-size:12px;margin-right:4px" onclick="openSellEditModal('${s.id}')">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="deleteSell('${s.id}')">刪除</button>
       </td>
     </tr>`;
   });
@@ -1814,17 +1814,17 @@ function render(){
   let dr="";
   [...dividends].sort((a,b)=>b.exDate.localeCompare(a.exDate)).forEach(d=>{
     dr+=`<tr class="history-row">
-      <td style="padding-left:20px"><div class="fw-500">${esc(d.name)}</div><div style="font-size:11px;color:var(--text-4)">${esc(d.ticker)}</div></td>
+      <td style="padding-left:20px"><div class="fw-500">${esc(d.name)}</div><div style="font-size:12px;color:var(--text-4)">${esc(d.ticker)}</div></td>
       <td><span class="tag">${d.currency}</span></td>
       <td>${fmtPrice(d.perShare,d.currency)}</td>
       <td>${fmtShares(d.shares,d.currency)}</td>
       <td class="t-muted">${fmtCur(d.grossAmount,d.currency)}</td>
       <td class="fw-500">${fmtCur(d.netAmount,d.currency)}</td>
       <td class="t-muted">${d.exDate}</td>
-      <td class="t-muted" style="font-size:11px">${esc(d.note||"-")}</td>
+      <td class="t-muted" style="font-size:12px">${esc(d.note||"-")}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openDividendEditModal('${d.id}')">編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteDividend('${d.id}')">刪除</button>
+        <button class="btn btn-action" style="padding:4px 10px;font-size:12px;margin-right:4px" onclick="openDividendEditModal('${d.id}')">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="deleteDividend('${d.id}')">刪除</button>
       </td>
     </tr>`;
   });
@@ -1842,7 +1842,7 @@ function renderTable(){
     const isOpen=expanded.has(g.ticker);
     const gsel=sel?.type==='group'&&sel.ticker===g.ticker;
     rows+=`<tr class="group-row${gsel?' selected':''}" onclick="pickGroup('${esc(escJs(g.ticker))}',event)">
-      <td><i class="chevron${isOpen?' open':''}" onclick="toggleExpand('${esc(escJs(g.ticker))}',event)">▶</i><span class="fw-500">${esc(g.name)}</span><div style="font-size:11px;color:var(--text-4);margin-left:22px">${esc(g.ticker)} · ${g.batches.length}批</div></td>
+      <td><i class="chevron${isOpen?' open':''}" onclick="toggleExpand('${esc(escJs(g.ticker))}',event)">▶</i><span class="fw-500">${esc(g.name)}</span><div style="font-size:12px;color:var(--text-4);margin-left:22px">${esc(g.ticker)} · ${g.batches.length}批</div></td>
       <td><span class="tag">${g.currency}</span></td>
       <td>${fmtShares(g.ts,g.currency)}</td>
       <td class="t-muted">${fmtPrice(g.ac,g.currency)}<div class="cell-sub">${fmtCur(g.tc,g.currency)}</div></td>
@@ -1851,7 +1851,7 @@ function renderTable(){
       <td><span class="${pnlClass(g.pct)} fw-500">${fmtPct(g.pct)}</span><div class="meter-bar"><div class="meter-fill" style="width:${mw}%;background:${si.color}"></div></div></td>
       <td class="${g.td!==0?pnlClass(g.td):'t-muted'}">${fmtCur(g.td,g.currency)}<div class="${pnlClass(g.ret)} fw-500 cell-sub-colored">${fmtCur(g.ret,g.currency)}</div></td>
       <td><span class="t-muted">${g.ap.toFixed(1)}%</span><div class="meter-bar" style="margin-top:2px"><div class="meter-fill" style="width:${aw}%"></div></div><div class="cell-sub">${fmtAnnualized(g.ann, Math.round(g.wd))}</div></td>
-      <td><span class="tag-status" style="background:${si.bg};color:${si.color};border:1px solid ${si.border};padding:2px 10px;border-radius:99px;font-size:11px">${si.label}</span></td>
+      <td><span class="tag-status" style="background:${si.bg};color:${si.color};border:1px solid ${si.border};padding:2px 10px;border-radius:99px;font-size:12px">${si.label}</span></td>
     </tr>`;
     if(isOpen) [...g.batches].sort((a,b)=>a.buyDate.localeCompare(b.buyDate)).forEach(b=>{
       const bFee = b.buyFee || 0;
@@ -2468,8 +2468,8 @@ function renderFlowsTab() {
       <td class="${isIn?"t-pos":"t-neg"}">${amt}</td>
       <td class="t-muted" style="font-size:12px">${esc(f.note||"—")}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-action" style="padding:4px 10px;font-size:11px;margin-right:4px" onclick="openFlowEditModal('${f.id}')">編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteFlow('${f.id}')">刪除</button>
+        <button class="btn btn-action" style="padding:4px 10px;font-size:12px;margin-right:4px" onclick="openFlowEditModal('${f.id}')">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="deleteFlow('${f.id}')">刪除</button>
       </td>
     </tr>`;
   });
@@ -2644,7 +2644,7 @@ function dashCardHTML(t, near, today) {
       let flag = "";
       if(crossed) flag = isMarketOpen(t.market)
         ? `<div class="dash-note t-warn">盤中越線，待收盤確認</div>`
-        : `<div class="t-warn fw-500" style="font-size:11px;margin-top:2px">已跨線${lv.volumeCondition ? "・量能條件見下" : ""}</div>`;
+        : `<div class="t-warn fw-500" style="font-size:12px;margin-top:2px">已跨線${lv.volumeCondition ? "・量能條件見下" : ""}</div>`;
       else if(isNear) flag = `<div class="dash-note t-warn">貼線（±${near}% 內）</div>`;
       if(isNear || crossed) cls = " near";
       distHTML = `<span class="fw-500">${dist >= 0 ? "+" : ""}${dist.toFixed(1)}%</span>${flag}`;
@@ -2703,7 +2703,7 @@ function dashCardHTML(t, near, today) {
     <div style="display:flex;flex-direction:column;gap:6px">${levelRows.join("")}</div>
     ${thesisHTML}
     ${catsHTML}
-    <div style="font-size:11px;color:var(--text-4)">${footHTML}</div>
+    <div style="font-size:12px;color:var(--text-4)">${footHTML}</div>
   </div>`;
 }
 
@@ -2712,7 +2712,7 @@ function renderDashboardTab() {
   if(!root) return;
   if(!dashboardData) {
     root.innerHTML = `<div class="card" style="padding:48px;text-align:center;color:var(--text-3);font-size:13px">
-      尚未匯入看板資料<br><span style="font-size:11px;color:var(--text-4)">請至 設定 → 看板資料 匯入 dashboard.json</span></div>`;
+      尚未匯入看板資料<br><span style="font-size:12px;color:var(--text-4)">請至 設定 → 看板資料 匯入 dashboard.json</span></div>`;
     return;
   }
   const near = dashboardData.alertRule?.nearLinePct ?? 3.0;
@@ -2724,7 +2724,7 @@ function renderDashboardTab() {
   const mod = dashboardData.lastModifiedAt || dashboardData.generatedAt || "";
   const modLabel = dashboardData.lastModifiedAt ? "最後修改" : "產出";
   const modText = mod.slice(0, 16).replace("T", " ");
-  const metaHTML = `<div class="card" style="padding:12px 18px;font-size:11px;color:var(--text-3);display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+  const metaHTML = `<div class="card" style="padding:12px 18px;font-size:12px;color:var(--text-3);display:flex;gap:14px;flex-wrap:wrap;align-items:center">
     <span>基準：台股 ${esc(bd.tw || "—")}｜美股 ${esc(bd.us || "—")}</span>
     <span>來源：${esc(dashboardData.sourceReport || "—")}</span>
     <span>${modLabel}：${esc(modText)}</span>
@@ -2741,7 +2741,7 @@ function renderDashboardTab() {
     ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-4px">${title}</div>
        <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today)).join("")}</div>` : "";
   const subSection = (title, arr) => arr.length
-    ? `<div style="font-size:11px;color:var(--text-4);margin-top:12px;margin-bottom:-4px;padding-left:2px">${title}</div>
+    ? `<div style="font-size:12px;color:var(--text-4);margin-top:12px;margin-bottom:-4px;padding-left:2px">${title}</div>
        <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today)).join("")}</div>` : "";
   const watchHeader = watching.length
     ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-8px">👁 觀察名單</div>` : "";
