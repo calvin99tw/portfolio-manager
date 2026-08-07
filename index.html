@@ -1014,7 +1014,7 @@ async function saveSnapshot() {
   const usd_value = usdGs.reduce((a,g) => a + g.tv, 0);
   const twd_cost  = twdGs.reduce((a,g) => a + g.tc, 0);
   const usd_cost  = usdGs.reduce((a,g) => a + g.tc, 0);
-  const today = new Date().toISOString().slice(0,10);
+  const today = localToday();
   const twd_net_deposit = calcNetDeposit('TWD');
   const usd_net_deposit = calcNetDeposit('USD');
   try {
@@ -1082,7 +1082,7 @@ async function loadFromSupabase() {
 
     // Migration: pool_flows 為空時，從舊 pools 資料建立初始入金記錄
     if (poolFlows.length === 0 && p) {
-      const today = new Date().toISOString().slice(0,10);
+      const today = localToday();
       const allBuys = buysRes.data || [];
       const twdBuysAll = allBuys.filter(b=>b.currency==='TWD');
       const usdBuysAll = allBuys.filter(b=>b.currency==='USD');
@@ -1283,6 +1283,9 @@ const getRate= () => parseFloat(document.getElementById("usdRate")?.value)||32;
 const toTWD  = (a,c) => c==="USD"?a*getRate():a;
 const dFrom  = d => Math.max(1,Math.floor((Date.now()-new Date(d))/86400000));
 const dBetween=(d1,d2)=>Math.max(1,Math.floor((new Date(d2)-new Date(d1))/86400000));
+// 本地（台北）今天日期：new Date().toISOString() 取的是 UTC 日期，00:00~08:00 台北時間會少算一天，
+// 快照/表單預設日/看板今日判斷一律改用這個，不要再用 toISOString().slice(0,10)
+const localToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
 
 function pnlClass(n) { return n>=0 ? 't-pos' : 't-neg'; }
 function pnlClassDim(n) { return n>=0 ? 't-pos-dim' : 't-neg-dim'; }
@@ -2064,14 +2067,14 @@ function openBuyModal(id, mode, prefill){
     document.getElementById("b-shares").value="";
     costInput.value=prefill.currentPrice;
     document.getElementById("b-fee").value="0";
-    document.getElementById("b-date").value=new Date().toISOString().slice(0,10);
+    document.getElementById("b-date").value=localToday();
   } else {
     t.textContent="新增買入紀錄"; s.textContent="";
     ["b-name","b-ticker","b-shares"].forEach(i=>document.getElementById(i).value="");
     costInput.value="";
     document.getElementById("b-fee").value="0";
     document.getElementById("b-currency").value="TWD";
-    document.getElementById("b-date").value=new Date().toISOString().slice(0,10);
+    document.getElementById("b-date").value=localToday();
   }
   document.getElementById("buyModal").classList.add("open");
 }
@@ -2126,7 +2129,7 @@ function openSellModal(id){
   document.getElementById("s-tax").value="0";
   document.getElementById("s-buyDate").value=b.buyDate;
   document.getElementById("s-buyDate").readOnly=true;
-  document.getElementById("s-date").value=new Date().toISOString().slice(0,10);
+  document.getElementById("s-date").value=localToday();
   document.getElementById("s-edit-extras").style.display="none";
   document.getElementById("s-confirm-btn").textContent="確認賣出";
   document.getElementById("sellModal").classList.add("open");
@@ -2163,7 +2166,7 @@ async function confirmSell(){
   const sTax=parseFloat(document.getElementById("s-tax").value)||0;
   const sd=document.getElementById("s-date").value;
   const bd=document.getElementById("s-buyDate").value;
-  const today = new Date().toISOString().slice(0,10);
+  const today = localToday();
 
   if(isNaN(ss)||ss<=0){showToast("賣出股數不正確",true);return;}
   if(isNaN(sp)||!sd||!bd){showToast("請填寫必填欄位",true);return;}
@@ -2276,7 +2279,7 @@ function openDividendModal(ticker){
   document.getElementById("d-shares").value=g.ts;
   document.getElementById("d-gross").value="";
   document.getElementById("d-net").value="";
-  document.getElementById("d-date").value=new Date().toISOString().slice(0,10);
+  document.getElementById("d-date").value=localToday();
   document.getElementById("d-note").value="";
   document.getElementById("dividendModal").classList.add("open");
   setupDividendInputs();
@@ -2378,7 +2381,7 @@ function openFlowModal(){
   document.getElementById("flow-currency").value = "TWD";
   document.getElementById("flow-amount-label").textContent = "金額 (TWD)";
   document.getElementById("flow-amount").value = "";
-  document.getElementById("flow-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("flow-date").value = localToday();
   document.getElementById("flow-note").value = "";
   document.getElementById("flowModalTitle").textContent = "資金流水";
   document.getElementById("flowModal").classList.add("open");
@@ -2716,7 +2719,7 @@ function renderDashboardTab() {
     return;
   }
   const near = dashboardData.alertRule?.nearLinePct ?? 3.0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const bd = dashboardData.baseDate || {};
   const priceTime = _dashFetchedAt
     ? `價格更新於 ${new Date(_dashFetchedAt).toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit", hour12:false})}`
@@ -2923,7 +2926,7 @@ function exportCSV(){
   poolFlows.forEach(f=>csv+=`${f.id},${f.currency},${f.type},${f.amount.toFixed(2)},${f.date},${(f.note||"").replace(/,/g,";")}\n`);
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"}));
-  const today=new Date().toISOString().slice(0,10);
+  const today=localToday();
   a.download=`portfolio-backup-${today}.csv`; a.click();
   showToast("CSV 已匯出 ✓");
 }
