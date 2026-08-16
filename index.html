@@ -316,6 +316,7 @@ tr.history-row:hover td { background: var(--bg-elev-2); }
 .dash-badge { font-size: 12px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-2); white-space: nowrap; }
 .dash-badge.warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn); }
 .dash-badge.stop { background: var(--text-1); border-color: var(--text-1); color: var(--bg); font-weight: 600; }
+.dash-badge.info { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 500; }
 .dash-text { font-size: 12px; color: var(--text-3); line-height: 1.65; }
 .dash-text b { color: var(--text-2); font-weight: 500; }
 .dash-level { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 12px; padding: 7px 10px; border-radius: 6px; background: var(--bg-elev-2); }
@@ -2615,10 +2616,13 @@ function dashCardHTML(t, near, today) {
   };
   const kindMap = { entry:"進場", add:"加碼", trim:"鎖利", stop:"停損", review:"檢視" };
   const orMap = { pipeline:"🔬 篩選", user:"👤 自選" };
+  const toneClsMap = { info:" info", warn:" warn", stop:" stop" };
   const st = stMap[t.status] || { i:"", l:esc(t.status) };
   const intendedTypeBadge = (t.holdingType === "watch" && htMap[t.intendedType])
     ? `<span class="dash-badge">${htMap[t.intendedType]}</span>` : "";
   const originBadge = orMap[t.origin] ? `<span class="dash-badge">${orMap[t.origin]}</span>` : "";
+  const headlineBadge = t.headline?.text
+    ? `<span class="dash-badge${toneClsMap[t.headline.tone] || ""}">${esc(t.headline.text)}</span>` : "";
 
   // 現價列
   let priceHTML = `<span class="t-mute2" style="font-size:12px">價格待更新 ⚠</span>`;
@@ -2692,6 +2696,7 @@ function dashCardHTML(t, near, today) {
     <div class="dash-head">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="fw-500" style="font-size:14px">${esc(t.ticker)} ${esc(t.name)}</span>
+        ${headlineBadge}
         <span class="dash-badge">${htMap[t.holdingType] || esc(t.holdingType)}</span>
         ${intendedTypeBadge}
         <span class="dash-badge${st.cls || ""}">${st.i} ${st.l}</span>
