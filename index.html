@@ -2617,12 +2617,13 @@ function dashCardHTML(t, near, today) {
   const kindMap = { entry:"進場", add:"加碼", trim:"鎖利", stop:"停損", review:"檢視" };
   const orMap = { pipeline:"🔬 篩選", user:"👤 自選" };
   const toneClsMap = { info:" info", warn:" warn", stop:" stop" };
+  const toneIconMap = { info:"➕ ", warn:"⚠️ ", stop:"🛑 " }; // neutral 無固定 icon 對應，不加
   const st = stMap[t.status] || { i:"", l:esc(t.status) };
   const intendedTypeBadge = (t.holdingType === "watch" && htMap[t.intendedType])
     ? `<span class="dash-badge">${htMap[t.intendedType]}</span>` : "";
   const originBadge = orMap[t.origin] ? `<span class="dash-badge">${orMap[t.origin]}</span>` : "";
   const headlineBadge = t.headline?.text
-    ? `<span class="dash-badge${toneClsMap[t.headline.tone] || ""}">${esc(t.headline.text)}</span>` : "";
+    ? `<span class="dash-badge${toneClsMap[t.headline.tone] || ""}">${toneIconMap[t.headline.tone] || ""}${esc(t.headline.text)}</span>` : "";
 
   // 現價列
   let priceHTML = `<span class="t-mute2" style="font-size:12px">價格待更新 ⚠</span>`;
