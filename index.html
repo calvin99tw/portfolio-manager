@@ -2739,6 +2739,17 @@ function renderDashboardTab() {
     <span>貼線門檻 ±${near}%</span>
     <span style="margin-left:auto">${priceTime}</span>
   </div>`;
+  const legendHTML = `<div class="card" style="padding:12px 18px;margin-top:10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="dash-badge">➕ 加碼</span>
+      <span class="dash-badge">⏸ 持有</span>
+      <span class="dash-badge">👁 觀望</span>
+      <span class="dash-badge warn">⚠️ 減碼警戒</span>
+      <span class="dash-badge stop">🛑 停損</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-3);line-height:1.6;margin-top:8px">紅＝漲/獲利、綠＝跌/虧損（亞洲慣例）｜琥珀＝注意/警戒與「貼線」｜↑上檔觸發 ↓下檔觸發</div>
+    <div style="font-size:12px;color:var(--text-4);line-height:1.6;margin-top:4px">量能門檻：量縮＝近20日均量×0.8（RVOL&lt;0.8）、量增＝近20日均量×1.5（RVOL&gt;1.5）；台股單位「張」、美股「股」</div>
+  </div>`;
 
   // 排序：持有在上（保留 JSON 原順序），watch 觀察在下；觀察再依 origin 分兩組
   const held = dashboardData.tickers.filter(t => t.holdingType !== "watch");
@@ -2755,6 +2766,7 @@ function renderDashboardTab() {
     ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-8px">👁 觀察名單</div>` : "";
 
   root.innerHTML = metaHTML
+    + legendHTML
     + section("💼 持有標的", held)
     + watchHeader
     + subSection("🔬 策略篩選", watchPipeline)
