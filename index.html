@@ -2603,10 +2603,15 @@ function dashVolumeHTML(vc, p, market) {
   return `<div class="dash-note">${label}條件${ok ? "達標" : "未達"}（${volTxt}／${thrTxt}）</div>`;
 }
 
+// dashboard.json role/held 重構過渡期 fallback：新欄位優先，缺欄位時從舊 holdingType/intendedType 推導，
+// 讓 App 端不論 Cowork 那邊處於新舊哪個階段都能正確運作，兩邊不需要對時間點
+function tickerHeld(t) { return t.held !== undefined ? t.held : t.holdingType !== "watch"; }
+function tickerRole(t) { return t.role || (t.holdingType === "watch" ? t.intendedType : t.holdingType); }
+
 function dashCardHTML(t, near, today) {
   const p = _dashPrices[t.yahooSymbol];
   const price = p?.price;
-  const htMap = { core:"🏛 長期結構", future:"🌱 買未來", dca:"🔁 定期定額", swing:"🌊 波段", watch:"👁 觀察" };
+  const htMap = { core:"🏛 長期結構", future:"🌱 買未來", dca:"🔁 定期定額", swing:"🌊 波段" };
   const stMap = {
     add:        { i:"➕", l:"加碼" },
     hold:       { i:"⏸", l:"持有" },
@@ -2619,8 +2624,10 @@ function dashCardHTML(t, near, today) {
   const toneClsMap = { info:" info", warn:" warn", stop:" stop" };
   const toneIconMap = { info:"➕ ", warn:"⚠️ ", stop:"🛑 " }; // neutral 無固定 icon 對應，不加
   const st = stMap[t.status] || { i:"", l:esc(t.status) };
-  const intendedTypeBadge = (t.holdingType === "watch" && htMap[t.intendedType])
-    ? `<span class="dash-badge">${htMap[t.intendedType]}</span>` : "";
+  const isHeld = tickerHeld(t);
+  const role = tickerRole(t);
+  // 未持有時不再另外掛「觀察」chip——status（👁 觀望）已經傳達這件事，role chip 只講角色，不重複講有無部位
+  const roleBadge = role ? `<span class="dash-badge">${htMap[role] || esc(role)}</span>` : "";
   const originBadge = orMap[t.origin] ? `<span class="dash-badge">${orMap[t.origin]}</span>` : "";
   const headlineBadge = t.headline?.text
     ? `<span class="dash-badge${toneClsMap[t.headline.tone] || ""}">${toneIconMap[t.headline.tone] || ""}${esc(t.headline.text)}</span>` : "";
@@ -2665,7 +2672,7 @@ function dashCardHTML(t, near, today) {
       <div style="text-align:right;white-space:nowrap">${distHTML}</div>
     </div>`;
   });
-  if(t.holdingType === "watch") {
+  if(!isHeld) {
     levelRows.push(`<div class="dash-level"><div>🛑 <b style="color:var(--text-2)">停損</b></div><div class="t-mute2">—（未持有）</div></div>`);
   }
 
@@ -2698,8 +2705,7 @@ function dashCardHTML(t, near, today) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="fw-500" style="font-size:14px">${esc(t.ticker)} ${esc(t.name)}</span>
         ${headlineBadge}
-        <span class="dash-badge">${htMap[t.holdingType] || esc(t.holdingType)}</span>
-        ${intendedTypeBadge}
+        ${roleBadge}
         <span class="dash-badge${st.cls || ""}">${st.i} ${st.l}</span>
         ${originBadge}
       </div>
@@ -2753,8 +2759,8 @@ function renderDashboardTab() {
   </div>`;
 
   // 排序：持有在上（保留 JSON 原順序），watch 觀察在下；觀察再依 origin 分兩組
-  const held = dashboardData.tickers.filter(t => t.holdingType !== "watch");
-  const watching = dashboardData.tickers.filter(t => t.holdingType === "watch");
+  const held = dashboardData.tickers.filter(t => tickerHeld(t));
+  const watching = dashboardData.tickers.filter(t => !tickerHeld(t));
   const watchPipeline = watching.filter(t => t.origin === "pipeline");
   const watchUser = watching.filter(t => t.origin !== "pipeline");
   const section = (title, arr) => arr.length
