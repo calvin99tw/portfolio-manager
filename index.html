@@ -2608,7 +2608,7 @@ function dashVolumeHTML(vc, p, market) {
 function tickerHeld(t) { return t.held !== undefined ? t.held : t.holdingType !== "watch"; }
 function tickerRole(t) { return t.role || (t.holdingType === "watch" ? t.intendedType : t.holdingType); }
 
-function dashCardHTML(t, near, today) {
+function dashCardHTML(t, near, today, holding) {
   const p = _dashPrices[t.yahooSymbol];
   const price = p?.price;
   const htMap = { core:"🏛 長期結構", future:"🌱 買未來", dca:"🔁 定期定額", swing:"🌊 波段" };
@@ -2641,6 +2641,19 @@ function dashCardHTML(t, near, today) {
       chgHTML = ` <span class="${chg >= 0 ? "t-pos" : "t-neg"}" style="font-size:12px">${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%</span>`;
     }
     priceHTML = `<span class="fw-500" style="font-size:15px">${fmtPrice(price, t.currency)}</span>${chgHTML}`;
+  }
+
+  // 未實現損益%＋持股股數@均價（均價含手續費，比照 Cowork 既有公式；App 端自有資料算出，不經 dashboard.json）
+  let unrealizedHTML = "";
+  if (holding && holding.ts > 0) {
+    const avgCost = holding.tc / holding.ts;
+    if (typeof price === "number" && avgCost > 0) {
+      const upct = (price - avgCost) / avgCost * 100;
+      unrealizedHTML = `<div style="margin-top:2px">
+        <span class="${pnlClass(upct)}" style="font-size:12px">${fmtPct(upct)}</span>
+        <span class="t-mute2" style="font-size:12px"> ${fmtShares(holding.ts, t.currency)}股@${fmtPrice(avgCost)}</span>
+      </div>`;
+    }
   }
 
   // 今日催化劑橫幅
@@ -2709,7 +2722,7 @@ function dashCardHTML(t, near, today) {
         <span class="dash-badge${st.cls || ""}">${st.i} ${st.l}</span>
         ${originBadge}
       </div>
-      <div>${priceHTML}</div>
+      <div style="text-align:right">${priceHTML}${unrealizedHTML}</div>
     </div>
     ${catBanner}
     <div class="dash-text"><b>結論</b>　${esc(t.conclusion || "—")}</div>
@@ -2758,6 +2771,10 @@ function renderDashboardTab() {
     <div style="font-size:12px;color:var(--text-4);line-height:1.6;margin-top:4px">量能門檻：量縮＝近20日均量×0.8（RVOL&lt;0.8）、量增＝近20日均量×1.5（RVOL&gt;1.5）；台股單位「張」、美股「股」</div>
   </div>`;
 
+  // 未實現損益%／股數@均價：用 App 自有的 buys 資料算，不經 dashboard.json（均價含手續費）
+  const holdingByTicker = {};
+  groups().forEach(g => { holdingByTicker[g.ticker] = g; });
+
   // 排序：持有在上（保留 JSON 原順序），watch 觀察在下；觀察再依 origin 分兩組
   const held = dashboardData.tickers.filter(t => tickerHeld(t));
   const watching = dashboardData.tickers.filter(t => !tickerHeld(t));
@@ -2765,10 +2782,10 @@ function renderDashboardTab() {
   const watchUser = watching.filter(t => t.origin !== "pipeline");
   const section = (title, arr) => arr.length
     ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-4px">${title}</div>
-       <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today)).join("")}</div>` : "";
+       <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today, holdingByTicker[t.ticker])).join("")}</div>` : "";
   const subSection = (title, arr) => arr.length
     ? `<div style="font-size:12px;color:var(--text-4);margin-top:12px;margin-bottom:-4px;padding-left:2px">${title}</div>
-       <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today)).join("")}</div>` : "";
+       <div class="dash-grid">${arr.map(t => dashCardHTML(t, near, today, holdingByTicker[t.ticker])).join("")}</div>` : "";
   const watchHeader = watching.length
     ? `<div style="font-size:12px;color:var(--text-3);margin-top:16px;margin-bottom:-8px">👁 觀察名單</div>` : "";
 
