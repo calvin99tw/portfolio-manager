@@ -1064,6 +1064,7 @@ async function loadFromSupabase() {
     if (buysRes.error) throw buysRes.error;
     if (sellsRes.error) throw sellsRes.error;
     if (divsRes.error) throw divsRes.error;
+    if (flowsRes.error) throw flowsRes.error;
     const hasSupabaseData = buysRes.data?.length || sellsRes.data?.length || divsRes.data?.length;
     const hasLocalCache = !!loadCacheFromStorage()?.buys?.length;
     if (hasSupabaseData || !hasLocalCache) {
@@ -1080,24 +1081,6 @@ async function loadFromSupabase() {
     // dashboard 載入（表未建立或無資料時保留本機值，不視為錯誤）
     if (dashRes.error) console.warn("dashboard 載入失敗（可忽略，表可能尚未建立）：", dashRes.error);
     else if (dashRes.data?.[0]?.payload) dashboardData = dashRes.data[0].payload;
-
-    // Migration: pool_flows 為空時，從舊 pools 資料建立初始入金記錄
-    if (poolFlows.length === 0 && p) {
-      const today = localToday();
-      const allBuys = buysRes.data || [];
-      const twdBuysAll = allBuys.filter(b=>b.currency==='TWD');
-      const usdBuysAll = allBuys.filter(b=>b.currency==='USD');
-      const twdDate = twdBuysAll.length>0 ? twdBuysAll.map(b=>b.buyDate).sort()[0] : today;
-      const usdDate = usdBuysAll.length>0 ? usdBuysAll.map(b=>b.buyDate).sort()[0] : today;
-      const rows = [];
-      if ((p.poolTWD||0) > 0) rows.push({currency:'TWD',type:'入金',amount:p.poolTWD,date:twdDate,note:'初始資金（v4.1 移轉）',user_id:uid});
-      if ((p.poolUSD||0) > 0) rows.push({currency:'USD',type:'入金',amount:p.poolUSD,date:usdDate,note:'初始資金（v4.1 移轉）',user_id:uid});
-      if (rows.length > 0) {
-        const {data: inserted, error: flowErr} = await sb.from('pool_flows').insert(rows).select();
-        if (!flowErr) poolFlows = inserted || rows;
-        else console.warn("pool_flows migration 失敗：", flowErr);
-      }
-    }
 
     saveToLocalCache();
     updateStorageStatus(true);
