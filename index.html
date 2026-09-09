@@ -2615,6 +2615,16 @@ function dashCardHTML(t, near, today, holding) {
   const headlineBadge = t.headline?.text
     ? `<span class="dash-badge${toneClsMap[t.headline.tone] || ""}">${esc(t.headline.text)}</span>` : "";
 
+  // 距 P6.1 機率加權目標價%：估值距離，非損益，故用中性 .dash-badge（不用紅綠）。
+  // 欄位不存在或現價未知時顯示「—」，仍然渲染 chip——沒有數字本身也是有效資訊（該標的 P6 分析已過期或從未跑過）
+  const p6Target = t.p6WeightedTarget?.value;
+  let p6PctText = "—";
+  if (typeof p6Target === "number" && typeof price === "number" && price > 0) {
+    const p6Pct = (p6Target - price) / price * 100;
+    p6PctText = `${p6Pct >= 0 ? "+" : ""}${p6Pct.toFixed(1)}%`;
+  }
+  const p6Badge = `<span class="dash-badge">距目標價 ${p6PctText}</span>`;
+
   // 現價列
   let priceHTML = `<span class="t-mute2" style="font-size:12px">價格待更新 ⚠</span>`;
   if(typeof price === "number") {
@@ -2701,6 +2711,7 @@ function dashCardHTML(t, near, today, holding) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="fw-500" style="font-size:14px">${esc(t.ticker)} ${esc(t.name)}</span>
         ${headlineBadge}
+        ${p6Badge}
         ${roleBadge}
         <span class="dash-badge${st.cls || ""}">${st.i} ${st.l}</span>
         ${originBadge}
