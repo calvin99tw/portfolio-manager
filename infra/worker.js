@@ -135,25 +135,6 @@ async function sendWebPush(sub, payloadStr, env) {
 
 // ══════════════ 收盤掃描（契約第 3 節） ══════════════
 
-async function yahooEOD(symbol) {
-  // 台股後綴容錯：.TWO ↔ .TW 互換重試（同 App 端，對上游資料錯誤的最後防線）
-  const candidates = [symbol];
-  if (symbol.endsWith(".TWO")) candidates.push(symbol.slice(0, -1));
-  else if (symbol.endsWith(".TW")) candidates.push(symbol + "O");
-  for (const c of candidates) {
-    try {
-      const res = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(c)}?interval=1d&range=1d`,
-        { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (typeof price === "number" && price > 0) return price;
-    } catch (e) { /* 試下一個 */ }
-  }
-  return null;
-}
-
 const KIND_LABEL = { entry: "進場", add: "加碼", trim: "鎖利", stop: "停損", review: "檢視" };
 
 async function runScan(market, env) {
@@ -172,27 +153,19 @@ async function runScan(market, env) {
     if (tickers.length === 0) continue;
     const near = row.payload?.alertRule?.nearLinePct ?? 3.0;
 
-    const prices = {};
-    if (priceOn) {
-      await Promise.all(tickers.map(async (t) => {
-        const p = await yahooEOD(t.yahooSymbol);
-        if (p) prices[t.ticker] = p;
-      }));
-    }
-
     const lines = [];
     for (const t of tickers) {
       for (const c of t.catalysts || []) {
         if (c.date === today) lines.push(`${t.ticker} ${t.name}｜今日 ${c.event}`);
       }
-      if (priceOn && prices[t.ticker]) {
-        const price = prices[t.ticker];
+      if (priceOn) {
+        // Issue #42 計算集中化：直接讀日更算好的 distancePct/crossed，不再自己抓 Yahoo 現價重算，
+        // 跟 App 卡片／日更報告統一同一套邏輯，避免三個計算點各自為政
         for (const lv of t.levels || []) {
-          const dist = ((lv.price - price) / price) * 100;
-          const crossed = lv.direction === "below" ? price < lv.price : price > lv.price;
+          if (typeof lv.distancePct !== "number" || typeof lv.crossed !== "boolean") continue; // 尚未寫入新欄位的舊資料，跳過
           const kind = KIND_LABEL[lv.kind] || lv.kind;
-          if (crossed) lines.push(`${t.ticker} ${t.name}｜收盤 ${price} 觸發${kind} ${lv.price}，量能條件待確認`);
-          else if (Math.abs(dist) <= near) lines.push(`${t.ticker} ${t.name}｜距${kind} ${lv.price} 僅 ${dist >= 0 ? "+" : ""}${dist.toFixed(1)}%`);
+          if (lv.crossed) lines.push(`${t.ticker} ${t.name}｜觸發${kind} ${lv.price}，量能條件待確認`);
+          else if (Math.abs(lv.distancePct) <= near) lines.push(`${t.ticker} ${t.name}｜距${kind} ${lv.price} 僅 ${lv.distancePct >= 0 ? "+" : ""}${lv.distancePct.toFixed(1)}%`);
         }
       }
     }

@@ -2654,11 +2654,32 @@ function dashCardHTML(t, near, today, holding) {
   const catBanner = todayCats.length
     ? `<div class="dash-cat-today">📣 今日：${todayCats.map(c => esc(c.event)).join("；")}</div>` : "";
 
-  // levels
+  // levels：優先讀 Claude 日更算好的 distancePct/crossed/proximityLabel（Issue #42 計算集中化，
+  // 跟 Worker cron／日更報告統一同一套邏輯），缺欄位時 fallback 回舊版即時自算（向下相容尚未遷移的 dashboard.json）
   const levelRows = (t.levels || []).map(lv => {
     let distHTML = `<span class="t-mute2">—</span>`;
     let cls = "";
-    if(typeof price === "number") {
+    const hasClaudeCalc = typeof lv.distancePct === "number" && typeof lv.crossed === "boolean";
+
+    if(hasClaudeCalc) {
+      const dist = lv.distancePct;
+      const crossed = lv.crossed;
+      const isNear = lv.proximityLabel === "貼線";
+      let flag = "";
+      if(crossed) flag = `<div class="t-warn fw-500" style="font-size:12px;margin-top:2px">已跨線${lv.volumeCondition ? "・量能條件見下" : ""}</div>`;
+      else if(isNear) flag = `<div class="dash-note t-warn">貼線（±${near}% 內）</div>`;
+      // 盤中比對用，不重新判定跨線：App 自己抓的即時價若比日更算出的更靠近/已跨線，疊加提示，收盤才是真正確認點
+      if(!crossed && typeof price === "number") {
+        const liveDist = (price - lv.price) / lv.price * 100;
+        const liveCrossed = lv.direction === "below" ? price < lv.price : price > lv.price;
+        if(liveCrossed || Math.abs(liveDist) < Math.abs(dist)) {
+          flag += `<div class="dash-note t-warn">盤中已達${fmtPrice(price, t.currency)}，較日更更靠近${liveCrossed ? "／已跨線" : ""}（以收盤確認為準）</div>`;
+        }
+      }
+      if(isNear || crossed) cls = " near";
+      distHTML = `<span class="fw-500">${dist >= 0 ? "+" : ""}${dist.toFixed(1)}%</span>${flag}`;
+    } else if(typeof price === "number") {
+      // fallback：舊版即時自算（dashboard.json 尚未寫入新欄位時）
       const dist = (lv.price - price) / price * 100;   // 契約公式：above 正、below 負
       const isNear = Math.abs(dist) <= near;
       const crossed = lv.direction === "below" ? price < lv.price : price > lv.price;
