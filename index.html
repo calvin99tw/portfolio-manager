@@ -319,7 +319,7 @@ tr.history-row:hover td { background: var(--bg-elev-2); }
 .dash-badge.info { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 500; }
 .dash-text { font-size: 12px; color: var(--text-3); line-height: 1.65; }
 .dash-text b { color: var(--text-2); font-weight: 500; }
-.dash-level { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 12px; padding: 7px 10px; border-radius: 6px; background: var(--bg-elev-2); }
+.dash-level { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 12px; padding: 7px 10px; border-radius: 6px; background: var(--bg-elev-2); }
 .dash-level.near { background: var(--warn-bg); border: 1px solid var(--warn-border); }
 .dash-note { font-size: 12px; color: var(--text-4); margin-top: 2px; }
 .dash-cat-today { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn); font-size: 12px; padding: 7px 10px; border-radius: 6px; }
@@ -2661,6 +2661,7 @@ function dashCardHTML(t, near, today, holding) {
     let cls = "";
     const hasClaudeCalc = typeof lv.distancePct === "number" && typeof lv.crossed === "boolean";
 
+    let intradayHint = "";
     if(hasClaudeCalc) {
       const dist = lv.distancePct;
       const crossed = lv.crossed;
@@ -2669,11 +2670,12 @@ function dashCardHTML(t, near, today, holding) {
       if(crossed) flag = `<div class="t-warn fw-500" style="font-size:12px;margin-top:2px">已跨線${lv.volumeCondition ? "・量能條件見下" : ""}</div>`;
       else if(isNear) flag = `<div class="dash-note t-warn">貼線（±${near}% 內）</div>`;
       // 盤中比對用，不重新判定跨線：App 自己抓的即時價若比日更算出的更靠近/已跨線，疊加提示，收盤才是真正確認點
+      // 獨立成整排全寬的一行（不塞進右側窄欄），避免長文字擠壓版面
       if(!crossed && typeof price === "number") {
         const liveDist = (price - lv.price) / lv.price * 100;
         const liveCrossed = lv.direction === "below" ? price < lv.price : price > lv.price;
         if(liveCrossed || Math.abs(liveDist) < Math.abs(dist)) {
-          flag += `<div class="dash-note t-warn">盤中已達${fmtPrice(price, t.currency)}，較日更更靠近${liveCrossed ? "／已跨線" : ""}（以收盤確認為準）</div>`;
+          intradayHint = `<div class="dash-note t-warn" style="flex-basis:100%;text-align:left;margin-top:4px">盤中已達${fmtPrice(price, t.currency)}，較日更更靠近${liveCrossed ? "／已跨線" : ""}（以收盤確認為準）</div>`;
         }
       }
       if(isNear || crossed) cls = " near";
@@ -2696,7 +2698,8 @@ function dashCardHTML(t, near, today, holding) {
       <div>${arrow} <b style="color:var(--text-2)">${kindMap[lv.kind] || esc(lv.kind)}</b> ${fmtPrice(lv.price, t.currency)}
         ${lv.note ? `<div class="dash-note">${esc(lv.note)}</div>` : ""}${dashVolumeHTML(lv.volumeCondition, p, t.market)}
       </div>
-      <div style="text-align:right;max-width:45%">${distHTML}</div>
+      <div style="text-align:right;white-space:nowrap">${distHTML}</div>
+      ${intradayHint}
     </div>`;
   });
   if(!isHeld) {
