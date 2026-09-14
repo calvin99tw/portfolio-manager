@@ -2696,7 +2696,7 @@ function dashCardHTML(t, near, today, holding) {
       <div>${arrow} <b style="color:var(--text-2)">${kindMap[lv.kind] || esc(lv.kind)}</b> ${fmtPrice(lv.price, t.currency)}
         ${lv.note ? `<div class="dash-note">${esc(lv.note)}</div>` : ""}${dashVolumeHTML(lv.volumeCondition, p, t.market)}
       </div>
-      <div style="text-align:right;white-space:nowrap">${distHTML}</div>
+      <div style="text-align:right;max-width:45%">${distHTML}</div>
     </div>`;
   });
   if(!isHeld) {
