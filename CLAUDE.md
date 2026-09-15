@@ -96,7 +96,7 @@ push_subscriptions → id, user_id, endpoint(unique), p256dh, auth, created_at�
 
 | 優先度 | 功能 | 說明 |
 |--------|------|------|
-| 高 | 價格推播撥開 flag | 雙軌比對（App 判定 vs Claude 日掃，7/7 起一至兩週）通過後，`infra/wrangler.toml` 改 `PRICE_PUSH_ENABLED="true"` → `npx wrangler deploy`；之後 Claude 例行掃描交棒（v3.2 B4） |
+| 高 | 價格推播撥開 flag | 雙軌比對第 1–4 項已於 2026-08-24 達標；撥 flag（`infra/wrangler.toml` 改 `PRICE_PUSH_ENABLED="true"` → `npx wrangler deploy`）前需等 dashboard.json 契約修訂（距離五欄位、符號統一，2026-09-15 提案）生效——Worker cron 已改讀 `distancePct`/`crossed` 不自算（#45）。⚠️ 2026-08-24 定案 Claude 日更**不交棒**、維持手動觸發，撥 flag 只是開啟價格推播 |
 | 中 | 池間資金轉移 | 從台股池轉到美股池（含匯率換算），同時記兩筆 pool_flows |
 | 中 | 目標配置與偏離警示 | 設定每個標的的目標佔比 |
 | 低 | 備注欄位 | 每筆買入可加投資理由 |
