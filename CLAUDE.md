@@ -148,7 +148,10 @@ GH_TOKEN=$(gh auth token -u calvin99tw) gh pr merge ...
 - **Cloudflare Worker**：新增路由時，`ALLOWED_ORIGINS` 不需更動；若 upstream API 會依 Accept header 回不同格式，記得在 fetch headers 明確指定
 - **CDN 腳本**：`index.html` 中的 CDN script tag 須固定版本號並附 `integrity`（sha384）+ `crossorigin="anonymous"`；升版時要重新計算 hash
 - **Supabase Anon Key**：publishable key，設計上可公開；安全依賴 RLS，每張資料表都需有 `user_id` 欄位 + policy
-- **Supabase Data API GRANT**：2026/10/30 起，public schema 的資料表需要明確 GRANT 才能透過 PostgREST/supabase-js 存取。**每次新增資料表都必須執行**：`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.<table> TO anon, authenticated;`
+- **Supabase Data API GRANT**：2026/10/30 起，public schema 的資料表需要明確 GRANT 才能透過 PostgREST/supabase-js 存取。**每次新增資料表都必須執行**：`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.<table> TO authenticated, service_role;`
+  - `service_role` 不可漏：Worker cron 以 service_role 打 `/rest/v1/`（如 `dashboard`、`push_subscriptions`），漏了只有 Worker 會 `permission denied`，前端看不出來
+  - `anon` 不需要：App 一律登入後才查詢，資料存取皆走 authenticated
+  - 既有 8 張表（10/30 前建立）保留自動授予的完整權限，不受影響（2026-10-22 已查 `information_schema.role_table_grants` 確認）
 - **XSS 跳脫（重要）**：使用者可控的自由文字（name/ticker/note/未來備註欄）進 `innerHTML` 前一律包 `esc()`；插入 `onclick` 等 inline JS 字串時先 `escJs()` 再 `esc()`。session token 存於 localStorage，XSS = 帳號接管，跳脫不可省。
 - **登出清快取**：`signOut()` 須 `localStorage.removeItem(STORAGE_KEY)`，避免共用電腦上殘留財務資料
 - **CSV 備份**：`.gitignore` 已設 `*.csv`，個人財務資料不進 repo
