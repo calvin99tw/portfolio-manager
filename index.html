@@ -310,10 +310,16 @@ tr.history-row:hover td { background: var(--bg-elev-2); }
 .t-warn { color: var(--warn); }
 
 /* ── Dashboard tab (T12) ── */
-.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; margin-top: 14px; }
-.dash-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+/* min(360px,100%)：手機寬度（扣掉 .main 左右 padding 不足 360px）時卡片縮到容器寬，不撐出橫向捲動 */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap: 14px; margin-top: 14px; }
+/* min-width:0 + overflow-wrap:anywhere：資料端自由文字（headline/note/催化劑）長度不受控，
+   無空白的長字串也要能斷行，不可撐破卡片（Issue #55） */
+.dash-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
 .dash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
-.dash-badge { font-size: 12px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-2); white-space: nowrap; }
+.dash-chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
+/* 不設 nowrap：短 chip 在 flex-wrap 下整顆換到下一列（不會從中間折斷），
+   只有比整列還寬的 chip（長 headline）才會在 chip 內換行；max-width 保證不超出卡片 */
+.dash-badge { font-size: 12px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-2); max-width: 100%; }
 .dash-badge.warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn); }
 .dash-badge.stop { background: var(--text-1); border-color: var(--text-1); color: var(--bg); font-weight: 600; }
 .dash-badge.info { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 500; }
@@ -2721,7 +2727,7 @@ function dashCardHTML(t, near, today, holding) {
 
   return `<div class="card dash-card">
     <div class="dash-head">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="dash-chips">
         <span class="fw-500" style="font-size:14px">${esc(t.ticker)} ${esc(t.name)}</span>
         ${headlineBadge}
         ${p6Badge}
